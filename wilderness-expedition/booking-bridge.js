@@ -94,6 +94,7 @@ window.KCBridge = (function () {
   function watchStatus(bookingId, onUpdate) {
     let stopped = false;
     let last = null;
+    let timer = null;
     async function poll() {
       if (stopped) return;
       try {
@@ -105,11 +106,23 @@ window.KCBridge = (function () {
         }
       } catch (e) {}
       if (!stopped && last !== "confirmed" && last !== "cancelled") {
-        setTimeout(poll, 4000);
+        // 1s while the tab is actually visible (feels close to instant
+        // once the guide taps Confirm/Reject — the webhook flips the KV
+        // status right away, so this interval is basically the only
+        // remaining delay). Backs off to 5s if the visitor switches tabs,
+        // then re-polls immediately the moment they come back.
+        timer = setTimeout(poll, document.hidden ? 5000 : 1000);
       }
     }
+    function onVisible() {
+      if (!document.hidden && !stopped && last !== "confirmed" && last !== "cancelled") {
+        clearTimeout(timer);
+        poll(); // immediate re-check the instant the visitor looks back at the tab
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
     poll();
-    return () => { stopped = true; };
+    return () => { stopped = true; clearTimeout(timer); document.removeEventListener("visibilitychange", onVisible); };
   }
 
   return { trackVisit, trackTap, sendDraft, notifyPayNow, uploadReceipt, submitBooking, watchStatus, sessionId };

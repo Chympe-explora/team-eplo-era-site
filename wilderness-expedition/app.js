@@ -419,15 +419,50 @@
 
     var receiptErrorState = useState(""); var receiptError = receiptErrorState[0], setReceiptError = receiptErrorState[1];
     var receiptOkState = useState(false); var receiptOk = receiptOkState[0], setReceiptOk = receiptOkState[1];
+    var receiptUploadingState = useState(false); var receiptUploading = receiptUploadingState[0], setReceiptUploading = receiptUploadingState[1];
+
+    // Phone camera receipt photos are often 3-8MB, and that whole file has
+    // to travel over (often slow) mobile data, then get relayed again by
+    // the backend to Telegram — that round trip is most of why receipt
+    // upload felt slow. Downscaling to a still very readable ~1600px on
+    // the long edge before upload cuts a typical receipt photo down to a
+    // few hundred KB, which is the biggest lever we have on upload speed.
+    function compressReceiptImage(file) {
+      return new Promise(function (resolve) {
+        if (!file || !/^image\//.test(file.type || "") || typeof document === "undefined") { resolve(file); return; }
+        var img = new Image();
+        var url = URL.createObjectURL(file);
+        img.onload = function () {
+          URL.revokeObjectURL(url);
+          var maxSide = 1600;
+          var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          if (scale >= 1) { resolve(file); return; }
+          var canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function (blob) {
+            if (!blob) { resolve(file); return; }
+            resolve(new File([blob], file.name || "receipt.jpg", { type: "image/jpeg" }));
+          }, "image/jpeg", 0.8);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+        img.src = url;
+      });
+    }
+
     function handleReceiptUpload(file) {
       if (!file) return;
       if (!window.KCBridge) { setReceiptError("Couldn't reach the booking system — please send your receipt on WhatsApp instead."); return; }
-      setReceiptError(""); setReceiptOk(false);
-      window.KCBridge.uploadReceipt(file, packageLabelForDraft() + " — " + money(grandTotal) + " (advance " + money(advance) + ")")
-        .then(function (res) {
-          if (res && res.ok) { setReceiptOk(true); }
-          else { setReceiptError("Receipt upload failed — please try again or send it on WhatsApp."); }
-        });
+      setReceiptError(""); setReceiptOk(false); setReceiptUploading(true);
+      compressReceiptImage(file).then(function (toSend) {
+        return window.KCBridge.uploadReceipt(toSend, packageLabelForDraft() + " — " + money(grandTotal) + " (advance " + money(advance) + ")");
+      }).then(function (res) {
+        setReceiptUploading(false);
+        if (res && res.ok) { setReceiptOk(true); }
+        else { setReceiptError("Receipt upload failed — please try again or send it on WhatsApp."); }
+      });
     }
 
     // Fired the moment the visitor taps "Pay Now" on the pricing page —
@@ -543,6 +578,11 @@
         specialRequest: contact.specialRequest, package: packageLabelForDraft(),
         reference: visitorCodeRef.current, advance: advance, total: grandTotal, balance: balanceLeft,
         paymentMethod: payTab === "qr" ? "QR Code" : payTab === "upi" ? "UPI" : "Bank Transfer",
+        // Full pretty-formatted text (ref no, itemized breakdown, totals —
+        // identical to the WhatsApp message) so the Telegram booking
+        // message the guide sees matches it exactly, with the payment
+        // receipt (if one was uploaded) attached to the same message.
+        message: buildBookingMessageText(),
       }).then(function (res) {
         if (res && res.ok && res.bookingId) {
           setBookingCode(visitorCodeRef.current);
@@ -673,13 +713,17 @@
       return day + " " + month + " " + parts[0];
     }
 
-    function whatsappLink() {
+    // Builds the exact same nicely-formatted booking text used for the
+    // WhatsApp prefill — also sent to the backend on Submit so the
+    // Telegram message the guide sees matches this format 1:1 (ref no,
+    // itemized breakdown, totals, payment method, everything).
+    function buildBookingMessageText() {
       var group = pkg === "sharedTour" ? formatGroup(sharedTourForm.adults, sharedTourForm.childAges)
         : pkg === "privatePackage" ? (privateForm.people + " Guest" + (privateForm.people === 1 ? "" : "s"))
         : "";
       var paymentMethod = payTab === "qr" ? "QR Code" : payTab === "upi" ? "UPI" : "Bank Transfer";
       var detailLines = invoiceLines().map(function (l) { return "• " + l[0] + ": " + l[1]; }).join("\n");
-      var msg = "🏔️ Booking Request — Krem Chympe Adventure\n\n" +
+      return "🏔️ Booking Request — Krem Chympe Adventure\n\n" +
         "Hi! I'd like to make a booking with the following details:\n" +
         "🖊️ Ref no: " + visitorCodeRef.current + "\n" +
         "👤 Name: " + contact.name + "\n" +
@@ -694,7 +738,10 @@
         "💳 Payment: " + paymentMethod + "\n\n" +
         (contact.specialRequest ? "📝 Special Request: " + contact.specialRequest + "\n\n" : "") +
         "Please confirm the availability and booking. Thank you!";
-      return "https://wa.me/" + CONTENT.whatsappNumber + "?text=" + encodeURIComponent(msg);
+    }
+
+    function whatsappLink() {
+      return "https://wa.me/" + CONTENT.whatsappNumber + "?text=" + encodeURIComponent(buildBookingMessageText());
     }
 
     // ---- Header ----------------------------------------------------
@@ -1392,6 +1439,7 @@
                 className: "w-full text-[12px] text-white/70 file:mr-3 file:py-2 file:px-3 file:rounded-full file:border-0 file:bg-emerald-500/20 file:text-emerald-300 file:text-[12px]"
               }),
               h("div", { className: "text-[11px] text-white/40 mt-2" }, "If this opens your camera instead of your gallery, open this page in Chrome/Safari (not inside the Telegram/Instagram/Facebook app) and try again."),
+              receiptUploading && h("div", { className: "text-[11px] text-white/60 mt-2" }, "⏳ Uploading receipt…"),
               receiptOk && h("div", { className: "text-[11px] text-emerald-300 mt-2" }, "✅ Receipt received."),
               receiptError && h("div", { className: "text-[11px] text-amber-300 mt-2" }, receiptError)
             ),

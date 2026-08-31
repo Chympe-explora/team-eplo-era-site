@@ -185,7 +185,7 @@
       whatsappNumber: "916001877518",
       upiId: "kremchympe@upi",
       bank: {
-        name: "Krem Chympe Adventure",
+        name: "Team Explo Era0",
         account: "123456789012",
         ifsc: "SBIN0001234",
         bankName: "SBI, Cherrapunji Branch"
@@ -691,7 +691,7 @@
 
       // ---- Site footer (shown at the very bottom of the home page) ----
       footer: {
-        brandName: "TEAM CHYMPE EXPLORA",
+        brandName: "TEAM EXPLO ERA",
         locationLine: "Brishyrnot, Hno: 34, Near Football Ground, Po: Lumshonong, East Jaintia Hills, Meghalaya, 793000, India",
         contactTitle: "Contact Us",
         phone: "+91 8787679579",

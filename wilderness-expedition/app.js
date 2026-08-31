@@ -17,16 +17,14 @@
   // Section on/off switches (edit window.KC_CONTENT.sections in config.js)
   var SECTIONS = Object.assign({
     trustBar: true, visitorGuide: true, activitiesFacilities: true, ourStory: true, statsRow: true, meetGuide: true,
-    destinationDetails: true, waterfalls: false,
-    sharedTourCard: true, campingCard: true, privatePackageCard: true,
+    destinationDetails: true,
+    sharedTourCard: true, privatePackageCard: true,
     packagesTrustRow: true, gallery: true
   }, CONTENT.sections || {});
 
-  var WATERFALLS = CONTENT.waterfalls || { title: "", subtitle: "", locations: [] };
-
   var VISITOR_GUIDE = CONTENT.visitorGuide || { title: "", subtitle: "", cards: [] };
   var ACT_FAC = CONTENT.activitiesFacilities || { title: "", subtitle: "", activitiesTitle: "", activities: [], facilitiesTitle: "", facilities: [] };
-  var WHY_VISIT = CONTENT.whyVisit || { title: "", blocks: [] };
+  var WHY_VISIT = CONTENT.whyVisit || { title: "", subtitle: "", intro: "", journeys: [] };
   var FOOTER = CONTENT.footer || { brandName: "", locationLine: "", contactTitle: "Contact Us", phone: "", email: "", followTitle: "Follow Us On", importantLinkTitle: "Important Link", refundPolicyLabel: "Refund Policy", copyright: "" };
   var REFUND_POLICY = CONTENT.refundPolicy || { title: "Refund Policy", intro: "", sections: [], promiseTitle: "", promiseText: [] };
 
@@ -161,14 +159,6 @@
   var Backpack = makeIcon([["path", { d: "M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" }], ["path", { d: "M8 21V13a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v8" }], ["path", { d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" }]]);
   var Mail = makeIcon([["rect", { width: 20, height: 16, x: 2, y: 4, rx: 2 }], ["path", { d: "m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" }]]);
   var InstagramIcon = makeIcon([["rect", { width: 20, height: 20, x: 2, y: 2, rx: 5 }], ["path", { d: "M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" }], ["line", { x1: 17.5, x2: 17.51, y1: 6.5, y2: 6.5 }]]);
-  var ExternalLink = makeIcon([
-    ["path", { d: "M15 3h6v6" }], ["path", { d: "M10 14 21 3" }],
-    ["path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" }]
-  ]);
-  var CameraOff = makeIcon([
-    ["path", { d: "M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-.9-1.08" }],
-    ["circle", { cx: 12, cy: 13, r: 3 }], ["line", { x1: 2, x2: 22, y1: 2, y2: 22 }]
-  ]);
 
   // ---------------------------------------------------------------------
   // Shared little components
@@ -183,76 +173,16 @@
 
   function Stepper(props) {
     var value = props.value, onChange = props.onChange, min = props.min == null ? 0 : props.min;
-    var max = props.max == null ? Infinity : props.max;
     return h(
       "div",
       { className: "flex items-center gap-2 bg-white/10 rounded-full p-1 border border-white/10" },
       h("button", { onClick: function () { onChange(Math.max(min, value - 1)); }, className: "w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white" }, h(Minus, { size: 14 })),
       h("span", { className: "w-6 text-center text-white text-sm font-medium" }, value),
-      h("button", {
-        onClick: function () { onChange(Math.min(max, value + 1)); },
-        disabled: value >= max,
-        className: "w-7 h-7 rounded-full flex items-center justify-center text-white " + (value >= max ? "bg-white/5 cursor-not-allowed opacity-40" : "bg-[#2E8B57] hover:bg-[#257a4b]")
-      }, h(Plus, { size: 14 }))
+      h("button", { onClick: function () { onChange(value + 1); }, className: "w-7 h-7 rounded-full bg-[#2E8B57] hover:bg-[#257a4b] flex items-center justify-center text-white" }, h(Plus, { size: 14 }))
     );
   }
 
   function money(n) { return "₹" + Number(n || 0).toLocaleString("en-IN"); }
-
-  // Same idea as ImageSlider, but sized/bordered to match the waterfall
-  // photo card (4:3, rounded-16px, dark bg) and able to show the
-  // "No Photo Yet" badge when hasPhoto is false.
-  function WaterfallPhoto(props) {
-    var images = (props.images || []).filter(Boolean);
-    var idxState = useState(0);
-    var idx = idxState[0], setIdx = idxState[1];
-
-    useEffect(function () {
-      if (images.length < 2) return undefined;
-      var timer = setInterval(function () {
-        setIdx(function (i) { return (i + 1) % images.length; });
-      }, 4000);
-      return function () { clearInterval(timer); };
-    }, [images.length]);
-
-    var safeIdx = images.length > 0 ? idx % images.length : 0;
-
-    return h(
-      "div", { className: "rounded-[16px] overflow-hidden border border-white/10 aspect-[4/3] bg-black/30 relative" },
-      images.length > 0 && h("img", { key: safeIdx, src: images[safeIdx], className: "w-full h-full object-cover" }),
-      !props.hasPhoto && h(
-        "div", { className: "absolute top-3 right-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur text-[11px] border border-white/20 flex items-center gap-1.5" },
-        h(CameraOff, { size: 12 }), "No Photo Yet"
-      ),
-      images.length > 1 && h(
-        "div", { className: "absolute inset-0 flex items-center justify-between px-2" },
-        h(
-          "button",
-          {
-            onClick: function () { setIdx(function (i) { return (i - 1 + images.length) % images.length; }); },
-            className: "w-7 h-7 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white",
-            "aria-label": "Previous photo"
-          },
-          h(ArrowLeft, { size: 14 })
-        ),
-        h(
-          "button",
-          {
-            onClick: function () { setIdx(function (i) { return (i + 1) % images.length; }); },
-            className: "w-7 h-7 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white",
-            "aria-label": "Next photo"
-          },
-          h(ArrowRight, { size: 14 })
-        )
-      ),
-      images.length > 1 && h(
-        "div", { className: "absolute bottom-1.5 inset-x-0 flex justify-center gap-1.5" },
-        images.map(function (_, i) {
-          return h("span", { key: i, className: "w-1.5 h-1.5 rounded-full " + (i === safeIdx ? "bg-white" : "bg-white/40") });
-        })
-      )
-    );
-  }
 
   // A small auto-sliding photo strip. Give it a list of image file names
   // via the "images" prop (e.g. from a highlight's images: [...] list in
@@ -325,51 +255,26 @@
   }
 
   function sharedTourTotals(f) {
-    var ST = PRICES.sharedTour;
-    var maxPeople = Math.max(1, Number(ST.maxPeople || 5));
-    var adults = Math.min(maxPeople, Math.max(1, Number(f.adults || 0)));
-    var additionalDays = Math.max(0, Number(f.additionalDays || 0));
-    var extraDayPerPersonPerDay = Number(ST.additionalDayPerPersonPerDay || 0);
-    var extraDayCost = additionalDays * adults * extraDayPerPersonPerDay;
-    return {
-      adults: adults,
-      maxPeople: maxPeople,
-      payingPersons: adults,
-      pricePerPerson: ST.perPerson,
-      additionalDays: additionalDays,
-      extraDayPerPersonPerDay: extraDayPerPersonPerDay,
-      extraDayCost: extraDayCost,
-      grandTotal: adults * ST.perPerson + extraDayCost
-    };
-  }
-
-  function campingTotals(f) {
     var payingChildren = payingChildrenCount(f.childAges);
-    var payingHeads = Number(f.adults || 0) + payingChildren;
+    var payingPersons = Number(f.adults || 0) + payingChildren;
     var freeChildren = f.childAges.length - payingChildren;
-    // Every line below is priced à la carte and simply summed — a visitor
-    // can select 0 tents and decline meals and still book, paying only the
-    // mandatory guide fee.
-    var tentsSelected = Math.max(0, Number(f.tents || 0));
-    var tentCost = tentsSelected * PRICES.camping.tentUnit;
-    var mealsCost = f.meals === "yes" ? payingHeads * PRICES.camping.mealsPerPerson : 0;
-    var guideCost = PRICES.camping.overnightGuide; // mandatory, always charged
-    var jeepCost = f.jeep === "yes" ? PRICES.camping.jeep : 0;
-    var activitiesCost = f.activities === "yes" ? payingHeads * PRICES.camping.activitiesPerPerson : 0;
-    // Free children only need a life jacket + entry fee if they're
-    // actually joining the adventure activities.
-    var childFeeCost = f.activities === "yes" ? freeChildren * freeChildFee() : 0;
-    var foodLines = PRICES.bambooMenu.map(function (item) {
-      var qty = Number((f.foodQty || {})[item.id] || 0);
-      return { id: item.id, name: item.name, qty: qty, price: item.price, cost: qty * item.price };
+    var ST = PRICES.sharedTour;
+    var lunchLines = (ST.thaliTypes || []).map(function (th) {
+      var qty = Number((f.lunchQty || {})[th.id] || 0);
+      return { id: th.id, name: th.name, qty: qty, price: ST.lunchThaliPrice, cost: qty * ST.lunchThaliPrice };
     });
-    var foodCost = foodLines.reduce(function (sum, l) { return sum + l.cost; }, 0);
+    var lunchCost = lunchLines.reduce(function (s, l) { return s + l.cost; }, 0);
+    // Shared Tour always includes the adventure activities, so every free
+    // child on this package is charged the life jacket + entry fee.
+    var childFeeCost = freeChildren * freeChildFee();
     return {
-      payingHeads: payingHeads, tentsSelected: tentsSelected, tentCost: tentCost,
-      mealsCost: mealsCost, guideCost: guideCost, jeepCost: jeepCost, activitiesCost: activitiesCost,
+      adults: Number(f.adults || 0),
+      freeChildren: freeChildren,
+      payingPersons: payingPersons,
+      pricePerPerson: ST.perPerson,
+      lunchLines: lunchLines, lunchCost: lunchCost,
       childFeeCost: childFeeCost,
-      foodLines: foodLines, foodCost: foodCost,
-      grandTotal: tentCost + mealsCost + guideCost + jeepCost + activitiesCost + childFeeCost + foodCost
+      grandTotal: payingPersons * ST.perPerson + lunchCost + childFeeCost
     };
   }
 
@@ -456,11 +361,9 @@
     var contactState = useState({ name: "", whatsapp: "", date: "", specialRequest: "" });
     var contact = contactState[0], setContact = contactState[1];
 
-    var sharedTourState = useState({ adults: 2, additionalDays: 0 });
+    var sharedTourState = useState({ adults: 2, children: 0, childAges: [], lunchQty: {} });
     var sharedTourForm = sharedTourState[0], setSharedTourForm = sharedTourState[1];
 
-    var campingState = useState({ adults: 2, children: 0, childAges: [], tents: 1, meals: "no", jeep: "no", activities: "no", foodQty: {} });
-    var campingForm = campingState[0], setCampingForm = campingState[1];
 
     var privateState = useState({ people: 1, jeep: "no", adventure: "yes", lunchQty: {}, camping: "no", tents: 1, campingMeals: "yes", bambooQty: {} });
     var privateForm = privateState[0], setPrivateForm = privateState[1];
@@ -469,7 +372,7 @@
     // it stays in sync everywhere it's shown or enforced — falls back to
     // 500 if an older/incomplete PRICES object doesn't define it.
     var minAdvance = PRICES.minAdvance || 500;
-    var advanceState = useState(minAdvance); var advance = advanceState[0], setAdvance = advanceState[1];
+    var advanceState = useState(""); var advance = advanceState[0], setAdvance = advanceState[1];
     var payTabState = useState("qr"); var payTab = payTabState[0], setPayTab = payTabState[1];
     var copiedState = useState(""); var copied = copiedState[0], setCopied = copiedState[1];
 
@@ -488,6 +391,8 @@
     var trackingIdState = useState(""); var trackingId = trackingIdState[0], setTrackingId = trackingIdState[1];
     var bookingStatusState = useState("pending"); var bookingStatus = bookingStatusState[0], setBookingStatus = bookingStatusState[1];
     var stopWatchRef = useRef(null);
+    // Highlights the WhatsApp escape-hatch button if a booking sits
+    // "pending" for more than 5 minutes without the guide confirming.
     var waitingLongState = useState(false); var waitingLong = waitingLongState[0], setWaitingLong = waitingLongState[1];
     useEffect(function () {
       if (bookingStatus !== "pending" || !trackingId) { setWaitingLong(false); return; }
@@ -496,7 +401,8 @@
     }, [bookingStatus, trackingId]);
 
     // Silently mirror the in-progress form to the guide's Telegram as the
-    // visitor fills it in. Fails silently if unreachable — never blocks.
+    // visitor fills it in. Fails silently if the bridge/backend is
+    // unreachable — never interrupts the booking flow.
     useEffect(function () {
       if (!window.KCBridge) return;
       window.KCBridge.sendDraft({
@@ -648,7 +554,6 @@
           package: packageLabel,
           people:
             pkg === "sharedTour" ? (totals.payingPersons || 0) + (totals.freeChildren || 0) :
-            pkg === "camping" ? totals.payingHeads :
             pkg === "privatePackage" ? totals.people :
             null,
           total: grandTotal,
@@ -660,16 +565,14 @@
     }
 
     var packageLabel = pkg === "sharedTour" ? (CONTENT.packages.sharedTour && CONTENT.packages.sharedTour.name) || "Shared Package"
-      : pkg === "camping" ? (CONTENT.packages.camping && CONTENT.packages.camping.name) || "Camping Package"
       : pkg === "privatePackage" ? (CONTENT.packages.privatePackage && CONTENT.packages.privatePackage.name) || "Private Package"
       : "";
 
     var totals = useMemo(function () {
       if (pkg === "sharedTour") return sharedTourTotals(sharedTourForm);
-      if (pkg === "camping") return campingTotals(campingForm);
       if (pkg === "privatePackage") return privatePackageTotals(privateForm);
       return { grandTotal: 0 };
-    }, [pkg, sharedTourForm, campingForm, privateForm]);
+    }, [pkg, sharedTourForm, privateForm]);
 
     var grandTotal = totals.grandTotal || 0;
     var balanceLeft = Math.max(0, grandTotal - Number(advance || 0));
@@ -681,7 +584,6 @@
     }
 
     function goToPackage(which) {
-      if (window.KCBridge) window.KCBridge.trackTap(which);
       setPkg(which);
       setPage(3);
     }
@@ -689,22 +591,14 @@
     function invoiceLines() {
       if (pkg === "sharedTour") {
         var stLines = [
-          ["Number of People", totals.adults],
+          ["Adults", totals.adults],
+          ["Children (Free)", totals.freeChildren],
+          ["Paying Persons", totals.payingPersons],
           ["Price Per Person", money(totals.pricePerPerson)]
         ];
-        if (totals.extraDayCost > 0) stLines.push(["Additional Days (" + totals.additionalDays + " day" + (totals.additionalDays === 1 ? "" : "s") + " × " + totals.adults + " people)", money(totals.extraDayCost)]);
+        (totals.lunchLines || []).forEach(function (l) { if (l.qty > 0) stLines.push([l.name + " x" + l.qty, money(l.cost)]); });
+        if (totals.childFeeCost > 0) stLines.push(["Life Jacket & Entry Fee (" + totals.freeChildren + " free child" + (totals.freeChildren === 1 ? "" : "ren") + ")", money(totals.childFeeCost)]);
         return stLines;
-      }
-      if (pkg === "camping") {
-        var lines = [];
-        if (totals.tentsSelected > 0) lines.push(["Tent" + (totals.tentsSelected === 1 ? "" : "s") + " x" + totals.tentsSelected, money(totals.tentCost)]);
-        lines.push(["Overnight Guide (mandatory)", money(totals.guideCost)]);
-        if (totals.mealsCost > 0) lines.push(["Meals (" + totals.payingHeads + " people)", money(totals.mealsCost)]);
-        if (totals.jeepCost > 0) lines.push(["4x4 Jeep (Pickup & Drop)", money(totals.jeepCost)]);
-        if (totals.activitiesCost > 0) lines.push(["Adventure Activities (" + totals.payingHeads + " people)", money(totals.activitiesCost)]);
-        if (totals.childFeeCost > 0) lines.push(["Life Jacket & Entry Fee (free children)", money(totals.childFeeCost)]);
-        totals.foodLines.forEach(function (l) { if (l.qty > 0) lines.push([l.name + " x" + l.qty, money(l.cost)]); });
-        return lines;
       }
       if (pkg === "privatePackage") {
         var ppLines = [];
@@ -751,8 +645,7 @@
     }
 
     function whatsappLink() {
-      var group = pkg === "sharedTour" ? (sharedTourForm.adults + " Person" + (sharedTourForm.adults === 1 ? "" : "s"))
-        : pkg === "camping" ? formatGroup(campingForm.adults, campingForm.childAges)
+      var group = pkg === "sharedTour" ? formatGroup(sharedTourForm.adults, sharedTourForm.childAges)
         : pkg === "privatePackage" ? (privateForm.people + " Guest" + (privateForm.people === 1 ? "" : "s"))
         : "";
       var paymentMethod = payTab === "qr" ? "QR Code" : payTab === "upi" ? "UPI" : "Bank Transfer";
@@ -948,71 +841,31 @@
           })
         )
       ),
-      SECTIONS.waterfalls && WATERFALLS.locations && WATERFALLS.locations.length > 0 && h(
-        GlassCard, { className: "p-6 md:p-10" },
-        h("h2", { className: "text-2xl md:text-3xl font-semibold text-center tracking-tight" }, WATERFALLS.title),
-        WATERFALLS.subtitle && h("p", { className: "mt-2 text-white/60 text-sm text-center max-w-[620px] mx-auto" }, WATERFALLS.subtitle),
-        h(
-          "div", { className: "mt-8 space-y-6" },
-          WATERFALLS.locations.map(function (wf) {
-            var mapsUrl = wf.mapLink && wf.mapLink.trim()
-              ? wf.mapLink
-              : (wf.lat != null && wf.lng != null ? "https://www.google.com/maps?q=" + wf.lat + "," + wf.lng : "");
-            var wfImages = (wf.images && wf.images.length > 0) ? wf.images : [wf.image];
-            return h(
-              "div", { key: wf.title, className: "grid md:grid-cols-2 gap-6 items-start pt-6 border-t border-white/10 first:pt-0 first:border-t-0" },
-              h(
-                "div", null,
-                h(
-                  "div", { className: "flex items-center gap-3" },
-                  h("span", { className: "text-2xl" }, wf.emoji),
-                  h("h3", { className: "font-semibold text-xl" }, wf.title)
-                ),
-                wf.subtitle && h("div", { className: "mt-1 text-[13px] text-emerald-300/90 italic" }, wf.subtitle),
-                wf.story && h("p", { className: "mt-4 text-[14px] text-white/70 leading-relaxed" }, wf.story)
-              ),
-              h(
-                "div", null,
-                h(WaterfallPhoto, { images: wfImages, hasPhoto: wf.hasPhoto }),
-                mapsUrl
-                  ? h("a", { href: mapsUrl, target: "_blank", rel: "noopener noreferrer", className: "mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-[#2E8B57] hover:bg-[#257a4b] text-sm font-medium" }, h(MapPin, { size: 14 }), "Open in Google Maps", h(ExternalLink, { size: 12 }))
-                  : h("div", { className: "mt-3 w-full text-center px-4 py-2.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/40" }, "Map link not added yet")
-              )
-            );
-          })
-        )
-      ),
-      WHY_VISIT.blocks && WHY_VISIT.blocks.length > 0 && h(
+      WHY_VISIT.journeys && WHY_VISIT.journeys.length > 0 && h(
         GlassCard, { className: "p-6 md:p-10" },
         h("h2", { className: "text-2xl md:text-3xl font-semibold text-center tracking-tight" }, WHY_VISIT.title),
+        WHY_VISIT.subtitle && h("p", { className: "mt-2 text-white/80 text-base font-medium text-center" }, WHY_VISIT.subtitle),
+        WHY_VISIT.intro && h("p", { className: "mt-4 text-white/60 text-sm leading-relaxed text-center max-w-[720px] mx-auto" }, WHY_VISIT.intro),
         h(
-          "div", { className: "mt-8 max-w-[720px] mx-auto space-y-5" },
-          WHY_VISIT.blocks.map(function (block, i) {
-            if (block.type === "heading") {
-              return h("h3", { key: i, className: "text-lg md:text-xl font-semibold text-white pt-2" }, block.text);
-            }
-            if (block.type === "paragraph") {
-              return h("p", { key: i, className: "text-[14px] text-white/70 leading-relaxed" }, block.text);
-            }
-            if (block.type === "list") {
-              return h(
-                "ul", { key: i, className: "space-y-3 pl-1" },
-                (block.items || []).map(function (item, j) {
-                  return h("li", { key: j, className: "flex gap-2.5 text-[14px] text-white/70 leading-relaxed" }, h("span", { className: "text-emerald-400 font-bold flex-shrink-0" }, "•"), h("span", null, item));
+          "div", { className: "mt-8 grid md:grid-cols-2 gap-5" },
+          WHY_VISIT.journeys.map(function (j) {
+            return h(
+              "div", { key: j.number, className: "" },
+              h(
+                "div", { className: "flex items-center gap-3" },
+                h("span", { className: "text-2xl" }, j.emoji),
+                h("span", { className: "text-[11px] tracking-widest text-white/40 font-semibold" }, j.number, " —"),
+                h("h3", { className: "font-semibold text-[15px]" }, j.title)
+              ),
+              j.tagline && h("div", { className: "mt-3 text-white/80 text-[13px] font-medium italic" }, j.tagline),
+              j.description && h("p", { className: "mt-2 text-[13px] text-white/60 leading-relaxed" }, j.description),
+              j.experience && j.experience.length > 0 && h(
+                "div", { className: "mt-4 flex flex-wrap gap-2" },
+                j.experience.map(function (tag) {
+                  return h("span", { key: tag, className: "px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/20 text-[11px] text-emerald-300" }, tag);
                 })
-              );
-            }
-            if (block.type === "quote") {
-              return h(
-                "blockquote", { key: i, className: "border-l-2 border-emerald-400/50 pl-4 py-1 italic text-white/85 text-[15px] leading-relaxed" },
-                "\u201C" + block.text + "\u201D",
-                block.attribution && h("div", { className: "mt-2 text-[12px] not-italic text-white/50 tracking-wide" }, block.attribution)
-              );
-            }
-            if (block.type === "divider") {
-              return h("div", { key: i, className: "border-t border-white/10 my-2" });
-            }
-            return null;
+              )
+            );
           })
         )
       ),
@@ -1116,7 +969,7 @@
     }
 
     var PKG = CONTENT.packages || {};
-    var pkgFillValues = { childFreeAge: PRICES.childFreeAge, mealsPerPerson: money(PRICES.camping.mealsPerPerson), overnightGuide: money(PRICES.camping.overnightGuide), childJacketFee: money(PRICES.childJacketFee), childEntryFee: money(PRICES.childEntryFee) };
+    var pkgFillValues = { childFreeAge: PRICES.childFreeAge, childJacketFee: money(PRICES.childJacketFee), childEntryFee: money(PRICES.childEntryFee) };
     var PACKAGES_PAGE = CONTENT.packagesPage || { subtitle: "", trustRow: [] };
 
     var sharedTourCard = SECTIONS.sharedTourCard && h(
@@ -1139,29 +992,6 @@
           PKG.sharedTour.features.map(function (f) { return IncludedItem(fill(f, pkgFillValues)); })
         ),
         h("button", { onClick: function () { goToPackage("sharedTour"); }, className: "mt-6 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full font-medium flex items-center justify-center gap-2" }, t("bookNow", "Book Now"), " ", h(ArrowRight, { size: 16 }))
-      )
-    );
-
-    var campingCard = SECTIONS.campingCard && h(
-      GlassCard, { className: "overflow-hidden group" },
-      h(
-        "div", { className: "relative h-[220px] overflow-hidden" },
-        h("img", { src: CONTENT.sectionImages.campingCard, className: "w-full h-full object-cover group-hover:scale-105 transition duration-700" }),
-        h("div", { className: "absolute top-4 left-4 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-xs border border-white/10 flex items-center gap-1" }, h(Tent, { size: 12 }), " " + PKG.camping.badge),
-        h("div", { className: "absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/70 to-transparent" })
-      ),
-      h(
-        "div", { className: "p-6" },
-        h(
-          "div", { className: "flex justify-between items-start" },
-          h("h3", { className: "text-xl font-semibold" }, PKG.camping.name),
-          h("div", { className: "text-right" }, h("div", { className: "text-xl font-bold" }, money(PRICES.camping.tent)), h("div", { className: "text-[11px] text-white/50" }, PKG.camping.priceUnit))
-        ),
-        h(
-          "ul", { className: "mt-4 space-y-2 text-[13px] text-white/70" },
-          PKG.camping.features.map(function (f) { return IncludedItem(fill(f, pkgFillValues)); })
-        ),
-        h("button", { onClick: function () { goToPackage("camping"); }, className: "mt-6 w-full bg-white text-black hover:bg-white/90 py-3 rounded-full font-medium flex items-center justify-center gap-2" }, t("bookNow", "Book Now"), " ", h(ArrowRight, { size: 16 }))
       )
     );
 
@@ -1200,7 +1030,7 @@
         h("h2", { className: "text-3xl md:text-4xl font-bold" }, t("ourAdventurePackages", "Our Adventure Packages")),
         h("p", { className: "text-white/60 mt-3 text-sm" }, PACKAGES_PAGE.subtitle)
       ),
-      h("div", { className: "grid md:grid-cols-2 lg:grid-cols-3 gap-6" }, sharedTourCard, campingCard, privatePackageCard),
+      h("div", { className: "grid md:grid-cols-2 lg:grid-cols-3 gap-6" }, sharedTourCard, privatePackageCard),
       SECTIONS.packagesTrustRow && h(
         GlassCard, { className: "px-6 py-4 flex flex-wrap justify-center gap-6 text-[13px] text-white/70" },
         PACKAGES_PAGE.trustRow.map(function (label, i) {
@@ -1228,108 +1058,26 @@
         h("div", { className: "font-medium text-white mb-2" }, STB.includedTitle),
         h("div", { className: "text-white/70" }, STB.includesLabel || "Includes:"),
         h("ul", { className: "mt-1 text-xs text-white/50 list-disc pl-5 space-y-0.5" }, (STB.includedItems || []).map(function (it) { return h("li", { key: it }, it); })),
+        h("div", { className: "mt-3 text-white/50" }, fill(STB.childFreeText, pkgFillValues)),
         toLines(STB.batchText).map(function (line, i) { return h("div", { key: i, className: "mt-2 text-white/50" }, fill(line, pkgFillValues)); })
       ),
       h(
-        "label", { className: "space-y-2 block" },
-        h("span", { className: "text-xs text-white/60" }, STB.adultsLabel || "Number of People"),
-        h(
-          "div", { className: "flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-white/10" },
-          h("span", { className: "text-sm" }, sharedTourForm.adults, " " + (STB.adultsLabel || "People")),
-          h(Stepper, {
-            value: sharedTourForm.adults, min: 1, max: PRICES.sharedTour.maxPeople || 5,
-            onChange: function (v) { setSharedTourForm(Object.assign({}, sharedTourForm, { adults: v })); }
-          })
-        ),
-        STB.maxPeopleNote && h("div", { className: "text-[11px] text-white/40" }, STB.maxPeopleNote)
-      ),
-      h(
-        GlassCard, { className: "p-5 !rounded-[16px] space-y-3" },
-        h("div", { className: "flex justify-between items-baseline" }, h("div", { className: "font-medium" }, STB.additionalDaysTitle || "Additional Days (optional)"), h("div", { className: "text-xs text-white/50" }, money(PRICES.sharedTour.additionalDayPerPersonPerDay) + "/person/day")),
-        STB.additionalDaysNote && h("div", { className: "text-xs text-white/50" }, STB.additionalDaysNote),
-        h(
-          "div", { className: "flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-white/10" },
-          h("span", { className: "text-sm" }, sharedTourForm.additionalDays, " " + (STB.additionalDaysLabel || "Extra Days")),
-          h(Stepper, { value: sharedTourForm.additionalDays, min: 0, onChange: function (v) { setSharedTourForm(Object.assign({}, sharedTourForm, { additionalDays: v })); } })
-        )
-      )
-    );
-
-    var CB = CONTENT.campingBooking || {};
-    var campingForm2 = pkg === "camping" && h(
-      "div", { className: "mt-8 space-y-5" },
-      h(
         "div", { className: "grid md:grid-cols-2 gap-5" },
-        h("label", { className: "space-y-2 block" }, h("span", { className: "text-xs text-white/60" }, CB.adultsLabel), h("div", { className: "flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-white/10" }, h("span", { className: "text-sm" }, campingForm.adults, " " + CB.adultsLabel), h(Stepper, { value: campingForm.adults, min: 1, onChange: function (v) { setCampingForm(Object.assign({}, campingForm, { adults: v })); } }))),
-        h("label", { className: "space-y-2 block" }, h("span", { className: "text-xs text-white/60" }, CB.childrenLabel), h("div", { className: "flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-white/10" }, h("span", { className: "text-sm" }, campingForm.children, " " + CB.childrenLabel), h(Stepper, { value: campingForm.children, onChange: function (v) { setCampingForm(Object.assign({}, campingForm, { children: v, childAges: syncAges(campingForm.childAges, v) })); } })))
+        h("label", { className: "space-y-2 block" }, h("span", { className: "text-xs text-white/60" }, STB.adultsLabel), h("div", { className: "flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-white/10" }, h("span", { className: "text-sm" }, sharedTourForm.adults, " " + STB.adultsLabel), h(Stepper, { value: sharedTourForm.adults, min: 1, onChange: function (v) { setSharedTourForm(Object.assign({}, sharedTourForm, { adults: v })); } }))),
+        h("label", { className: "space-y-2 block" }, h("span", { className: "text-xs text-white/60" }, STB.childrenLabel), h("div", { className: "flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-white/10" }, h("span", { className: "text-sm" }, sharedTourForm.children, " " + STB.childrenLabel), h(Stepper, { value: sharedTourForm.children, onChange: function (v) { setSharedTourForm(Object.assign({}, sharedTourForm, { children: v, childAges: syncAges(sharedTourForm.childAges, v) })); } })))
       ),
-      h(ChildAgesInput, { count: campingForm.children, ages: campingForm.childAges, onChange: function (ages) { setCampingForm(Object.assign({}, campingForm, { childAges: ages })); } }),
-      h(
-        GlassCard, { className: "p-5 !rounded-[16px] text-[13px] text-white/70" },
-        h("div", { className: "font-medium text-white mb-2" }, CB.packageIncludesTitle),
-        h("div", { className: "text-white/70" }, CB.includesLabel || "Includes:"),
-        h("ul", { className: "mt-1 text-xs text-white/50 list-disc pl-5 space-y-0.5" }, (CB.packageIncludesItems || []).map(function (it) { return h("li", { key: it }, it); }))
-      ),
-      h(
-        GlassCard, { className: "p-5 !rounded-[16px] space-y-2" },
-        h("div", { className: "flex justify-between items-baseline" }, h("div", { className: "font-medium" }, CB.tentLabel || "Tents"), h("div", { className: "text-xs text-white/50" }, money(PRICES.camping.tentUnit) + (CB.tentPriceUnit || "/tent"))),
-        h("div", { className: "text-xs text-white/50" }, CB.tentNote),
-        h("div", { className: "flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-white/10" },
-          h("span", { className: "text-sm" }, campingForm.tents, " tent" + (campingForm.tents === 1 ? "" : "s")),
-          h(Stepper, { value: campingForm.tents, min: 0, onChange: function (v) { setCampingForm(Object.assign({}, campingForm, { tents: v })); } })
-        )
-      ),
-      h(
-        "div", { className: "grid md:grid-cols-1 gap-5" },
-        h(
-          "div", { className: "space-y-2" },
-          h("span", { className: "text-xs text-white/60" }, CB.mealsLabelPrefix + money(PRICES.camping.mealsPerPerson) + CB.mealsLabelSuffix),
-          h("div", { className: "text-xs text-white/50" }, CB.mealsIncludes),
-          h("div", { className: "text-xs text-white/50" }, CB.mealsNote),
-          h(
-            "div", { className: "flex gap-2" },
-            h("button", { onClick: function () { setCampingForm(Object.assign({}, campingForm, { meals: "yes" })); }, className: "flex-1 px-4 py-2.5 rounded-xl border text-xs " + (campingForm.meals === "yes" ? "bg-white text-black border-white" : "bg-white/5 border-white/10") }, CB.mealsYes),
-            h("button", { onClick: function () { setCampingForm(Object.assign({}, campingForm, { meals: "no" })); }, className: "flex-1 px-4 py-2.5 rounded-xl border text-xs " + (campingForm.meals === "no" ? "bg-white text-black border-white" : "bg-white/5 border-white/10") }, CB.mealsNo)
-          )
-        )
-      ),
+      h(ChildAgesInput, { count: sharedTourForm.children, ages: sharedTourForm.childAges, onChange: function (ages) { setSharedTourForm(Object.assign({}, sharedTourForm, { childAges: ages })); } }),
       h(
         GlassCard, { className: "p-5 !rounded-[16px] space-y-3" },
-        h("div", { className: "flex justify-between items-baseline" }, h("div", { className: "font-medium" }, CB.guideTitle), h("div", { className: "text-xs text-white/50" }, money(PRICES.camping.overnightGuide))),
-        h("div", { className: "text-xs text-white/50" }, fill(CB.guideNoteTemplate, { overnightGuide: money(PRICES.camping.overnightGuide), childFreeAge: PRICES.childFreeAge })),
-        h(RadioRow, { selected: true, disabled: true, label: CB.guideMandatoryLabel })
-      ),
-      h(
-        GlassCard, { className: "p-5 !rounded-[16px] space-y-3" },
-        h("div", { className: "flex justify-between items-baseline" }, h("div", { className: "font-medium" }, CB.jeepTitle), h("div", { className: "text-xs text-white/50" }, money(PRICES.camping.jeep) + CB.jeepPriceUnit)),
-        h("div", { className: "text-xs text-white/50" }, CB.jeepNote),
-        h(
-          "div", { className: "space-y-2" },
-          h(RadioRow, { selected: campingForm.jeep === "yes", label: CB.jeepYesLabel, priceLabel: "(+" + money(PRICES.camping.jeep) + ")", onClick: function () { setCampingForm(Object.assign({}, campingForm, { jeep: "yes" })); } }),
-          h(RadioRow, { selected: campingForm.jeep === "no", label: CB.jeepNoLabel, onClick: function () { setCampingForm(Object.assign({}, campingForm, { jeep: "no" })); } })
-        )
-      ),
-      h(
-        GlassCard, { className: "p-5 !rounded-[16px] space-y-3" },
-        h("div", { className: "flex justify-between items-baseline" }, h("div", { className: "font-medium" }, CB.activitiesTitle), h("div", { className: "text-xs text-white/50" }, money(PRICES.camping.activitiesPerPerson) + CB.activitiesPriceUnit)),
-        h("ul", { className: "text-xs text-white/50 list-disc pl-5 space-y-0.5" }, (CB.activitiesIncludes || []).map(function (it) { return h("li", { key: it }, it); })),
-        h("div", { className: "text-xs text-white/50" }, CB.activitiesNote),
-        h(
-          "div", { className: "space-y-2" },
-          h(RadioRow, { selected: campingForm.activities === "yes", label: CB.activitiesYesLabel, priceLabel: "(+" + money(PRICES.camping.activitiesPerPerson) + "/person)", onClick: function () { setCampingForm(Object.assign({}, campingForm, { activities: "yes" })); } }),
-          h(RadioRow, { selected: campingForm.activities === "no", label: CB.activitiesNoLabel, onClick: function () { setCampingForm(Object.assign({}, campingForm, { activities: "no" })); } })
-        )
-      ),
-      h(
-        "details", { className: "group p-4 rounded-[16px] bg-white/5 border border-white/10", open: true },
-        h("summary", { className: "flex justify-between items-center cursor-pointer list-none" }, h("span", { className: "text-sm font-medium flex items-center gap-2" }, h(Utensils, { size: 16 }), CB.bambooDishesTitle), h(ChevronDown, { size: 16, className: "group-open:rotate-180 transition" })),
-        h("div", { className: "mt-4 grid md:grid-cols-2 gap-3" }, PRICES.bambooMenu.map(function (item) {
-          var qty = campingForm.foodQty[item.id] || 0;
-          return h(
-            "div", { key: item.id, className: "flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/10" },
-            h("div", null, h("div", { className: "text-[13px]" }, item.name), h("div", { className: "text-xs text-white/50" }, money(item.price))),
-            h(Stepper, { value: qty, onChange: function (v) { var nextQty = Object.assign({}, campingForm.foodQty); nextQty[item.id] = v; setCampingForm(Object.assign({}, campingForm, { foodQty: nextQty })); } })
-          );
+        h("div", { className: "flex justify-between items-baseline" }, h("div", { className: "font-medium" }, STB.lunchTitle), h("div", { className: "text-xs text-white/50" }, money(PRICES.sharedTour.lunchThaliPrice) + STB.lunchPriceUnit)),
+        h("div", { className: "text-xs text-white/50" }, STB.lunchSubtitle),
+        toLines(STB.lunchIncludes).map(function (line, i) { return h("div", { key: i, className: "text-xs text-white/50" }, line); }),
+        h("div", { className: "space-y-2" }, (PRICES.sharedTour.thaliTypes || []).map(function (th) {
+          var qty = (sharedTourForm.lunchQty || {})[th.id] || 0;
+          return h(ThaliRow, {
+            key: th.id, name: th.name, price: PRICES.sharedTour.lunchThaliPrice, qty: qty,
+            onChange: function (v) { var next = Object.assign({}, sharedTourForm.lunchQty); next[th.id] = v; setSharedTourForm(Object.assign({}, sharedTourForm, { lunchQty: next })); }
+          });
         }))
       )
     );
@@ -1489,7 +1237,7 @@
         GlassCard, { className: "p-6 md:p-8" },
         h("div", { className: "flex items-center gap-3" }, h("div", { className: "w-8 h-8 rounded-full flex items-center justify-center bg-[#2E8B57]" }, h(Compass, { size: 16 })), h("h2", { className: "text-2xl font-semibold" }, packageLabel, " Booking")),
         h("div", { className: "mt-8" }, contactFields),
-        sharedTourForm2, campingForm2, privatePackageForm2,
+        sharedTourForm2, privatePackageForm2,
         h(
           "button",
           {
@@ -1502,7 +1250,7 @@
       )
     );
 
-    // ---- Page 4: Pricing / invoice calculator (Shared Tour & Camping) --
+    // ---- Page 4: Pricing / invoice calculator --
     var page4 = page === 4 && h(
       "main", { className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6" },
       h(GlassCard, { className: "p-8 text-center" }, h("h2", { className: "text-3xl font-bold" }, t("pricingFacilities", "Pricing & Facilities")), h("p", { className: "text-white/60 text-sm mt-2" }, packageLabel, " — itemized invoice")),
@@ -1597,7 +1345,7 @@
             h(
               "div", null,
               h("label", { className: "text-xs text-white/60" }, "Advance Payment (Min " + money(minAdvance) + ")"),
-              h("input", { type: "number", min: minAdvance, value: advance, onChange: function (e) { setAdvance(Math.max(0, Number(e.target.value))); }, className: "mt-2 w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 outline-none text-sm" }),
+              h("input", { type: "number", min: minAdvance, value: advance, placeholder: "Min " + minAdvance, onChange: function (e) { var v = e.target.value; setAdvance(v === "" ? "" : Math.max(0, Number(v))); }, className: "mt-2 w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 outline-none text-sm" }),
               advance < minAdvance && h("div", { className: "text-[11px] text-red-300 mt-2" }, PAY.advanceHelperText),
               h("div", { className: "mt-2 text-xs text-white/50" }, t("balanceLeftLabel", "Balance left to pay on arrival: ₹"), balanceLeft)
             ),
@@ -1610,7 +1358,7 @@
               GlassCard, { className: "p-4 !rounded-[16px]" },
               h("label", { className: "text-xs text-white/60 block mb-2" }, "Upload Payment Receipt / Screenshot (optional)"),
               h("input", {
-                type: "file", accept: "image/*", capture: "environment",
+                type: "file", accept: "image/*",
                 onChange: function (e) { handleReceiptUpload(e.target.files && e.target.files[0]); },
                 className: "w-full text-[12px] text-white/70 file:mr-3 file:py-2 file:px-3 file:rounded-full file:border-0 file:bg-emerald-500/20 file:text-emerald-300 file:text-[12px]"
               })

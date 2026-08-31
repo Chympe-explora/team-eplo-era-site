@@ -64,8 +64,8 @@
   // Every heading, paragraph, and label on the home page.
   // ============================================================
   window.KC_CONTENT = {
-  "siteName": "TEAM CHYMPE EXPLORA",
-  "siteSub": "MEGHALAYA ADVENTURES",
+  "siteName": "TEAM EXPLO ERA",
+  "siteSub": "EXPLORE MEGHALAYA ADVENTURES",
   "whatsappNumber": "916001877518",
   "logoImage": "logo.png",
   "backgroundImage": "Blue watefall.jpg",

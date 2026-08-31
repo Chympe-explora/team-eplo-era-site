@@ -417,9 +417,32 @@
         : "";
     }
 
+    var receiptErrorState = useState(""); var receiptError = receiptErrorState[0], setReceiptError = receiptErrorState[1];
+    var receiptOkState = useState(false); var receiptOk = receiptOkState[0], setReceiptOk = receiptOkState[1];
     function handleReceiptUpload(file) {
-      if (!window.KCBridge || !file) return;
-      window.KCBridge.uploadReceipt(file, packageLabelForDraft() + " — " + money(grandTotal) + " (advance " + money(advance) + ")");
+      if (!file) return;
+      if (!window.KCBridge) { setReceiptError("Couldn't reach the booking system — please send your receipt on WhatsApp instead."); return; }
+      setReceiptError(""); setReceiptOk(false);
+      window.KCBridge.uploadReceipt(file, packageLabelForDraft() + " — " + money(grandTotal) + " (advance " + money(advance) + ")")
+        .then(function (res) {
+          if (res && res.ok) { setReceiptOk(true); }
+          else { setReceiptError("Receipt upload failed — please try again or send it on WhatsApp."); }
+        });
+    }
+
+    // Fired the moment the visitor taps "Pay Now" on the pricing page —
+    // sends everything collected so far straight to the admin's Telegram,
+    // separate from (and in addition to) the live draft that's already
+    // been mirrored as they typed.
+    function handlePayNowTapped() {
+      if (window.KCBridge) {
+        window.KCBridge.notifyPayNow({
+          name: contact.name, whatsapp: contact.whatsapp, date: contact.date,
+          specialRequest: contact.specialRequest, package: packageLabelForDraft(),
+          total: grandTotal,
+        }).catch(function () {});
+      }
+      setPage(5);
     }
 
     // ---- Refund Policy page: the reference number the visitor types in
@@ -504,32 +527,38 @@
       if (!pkg) { setSubmitError("Please choose a package before submitting."); return false; }
       if (!contact.name || !contact.whatsapp || !contact.date) { setSubmitError("Please fill in your name, WhatsApp number, and date first."); return false; }
       setSubmitError("");
-      setBookingCode(visitorCodeRef.current);
-      setSubmitted(true);
-      saveBookingRecord(visitorCodeRef.current);
-      setBookingStatus("pending");
-      setPage(6);
 
-      // Send the finished booking to the guide's Telegram in the
-      // background and start watching for Confirm/Cancel. The WhatsApp
-      // link stays available on page 6 as a manual fallback — it no
-      // longer opens automatically.
-      if (window.KCBridge) {
-        window.KCBridge.submitBooking({
-          name: contact.name, whatsapp: contact.whatsapp, date: contact.date,
-          specialRequest: contact.specialRequest, package: packageLabelForDraft(),
-          reference: visitorCodeRef.current, advance: advance, total: grandTotal, balance: balanceLeft,
-          paymentMethod: payTab === "qr" ? "QR Code" : payTab === "upi" ? "UPI" : "Bank Transfer",
-        }).then(function (res) {
-          if (res && res.bookingId) {
-            setTrackingId(res.bookingId);
-            if (stopWatchRef.current) stopWatchRef.current();
-            stopWatchRef.current = window.KCBridge.watchStatus(res.bookingId, function (status) {
-              setBookingStatus(status);
-            });
-          }
-        });
+      // Send the finished booking to the guide's Telegram FIRST, and only
+      // move the visitor on to the confirmation page once we know it
+      // actually reached the admin. Previously the visitor was always
+      // shown "submitted" immediately, even if the Telegram send failed —
+      // so a booking could vanish with no error and no record anywhere.
+      if (!window.KCBridge) {
+        setSubmitError("Couldn't reach the booking system. Please use the WhatsApp button below to send your booking directly.");
+        return false;
       }
+
+      window.KCBridge.submitBooking({
+        name: contact.name, whatsapp: contact.whatsapp, date: contact.date,
+        specialRequest: contact.specialRequest, package: packageLabelForDraft(),
+        reference: visitorCodeRef.current, advance: advance, total: grandTotal, balance: balanceLeft,
+        paymentMethod: payTab === "qr" ? "QR Code" : payTab === "upi" ? "UPI" : "Bank Transfer",
+      }).then(function (res) {
+        if (res && res.ok && res.bookingId) {
+          setBookingCode(visitorCodeRef.current);
+          setSubmitted(true);
+          saveBookingRecord(visitorCodeRef.current);
+          setBookingStatus("pending");
+          setPage(6);
+          setTrackingId(res.bookingId);
+          if (stopWatchRef.current) stopWatchRef.current();
+          stopWatchRef.current = window.KCBridge.watchStatus(res.bookingId, function (status) {
+            setBookingStatus(status);
+          });
+        } else {
+          setSubmitError("Your booking couldn't be sent to the admin (" + ((res && res.error) || "unknown error") + "). Please use the WhatsApp button below instead.");
+        }
+      });
       return true;
     }
 
@@ -1270,7 +1299,7 @@
           GlassCard, { className: "p-6 h-fit sticky top-24" },
           h("h4", { className: "font-semibold" }, t("totalCalculator", "Total Calculator")),
           h("div", { className: "mt-4 flex justify-between font-bold text-lg" }, h("span", null, t("totalAmount", "Total Amount")), h("span", null, money(grandTotal))),
-          h("button", { onClick: function () { setPage(5); }, className: "mt-4 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full font-semibold" }, t("payNow", "Pay Now")),
+          h("button", { onClick: handlePayNowTapped, className: "mt-4 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full font-semibold" }, t("payNow", "Pay Now")),
           h("div", { className: "text-[11px] text-white/40 text-center mt-2" }, (CONTENT.payment || {}).advanceNote)
         )
       )
@@ -1359,11 +1388,18 @@
               h("label", { className: "text-xs text-white/60 block mb-2" }, "Upload Payment Receipt / Screenshot (optional)"),
               h("input", {
                 type: "file", accept: "image/*",
-                onChange: function (e) { handleReceiptUpload(e.target.files && e.target.files[0]); },
+                onChange: function (e) { handleReceiptUpload(e.target.files && e.target.files[0]); e.target.value = ""; },
                 className: "w-full text-[12px] text-white/70 file:mr-3 file:py-2 file:px-3 file:rounded-full file:border-0 file:bg-emerald-500/20 file:text-emerald-300 file:text-[12px]"
-              })
+              }),
+              h("div", { className: "text-[11px] text-white/40 mt-2" }, "If this opens your camera instead of your gallery, open this page in Chrome/Safari (not inside the Telegram/Instagram/Facebook app) and try again."),
+              receiptOk && h("div", { className: "text-[11px] text-emerald-300 mt-2" }, "✅ Receipt received."),
+              receiptError && h("div", { className: "text-[11px] text-amber-300 mt-2" }, receiptError)
             ),
-            submitError && h("div", { className: "text-[12px] text-amber-300" }, submitError),
+            submitError && h(
+              "div", { className: "space-y-2" },
+              h("div", { className: "text-[12px] text-amber-300" }, submitError),
+              h("a", { href: whatsappLink(), target: "_blank", rel: "noopener", className: "kc-whatsapp-btn block text-center" }, "Send via WhatsApp instead")
+            ),
             h("button", {
               onClick: submitBookingViaWhatsApp,
               disabled: advance < minAdvance,

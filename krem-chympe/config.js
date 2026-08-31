@@ -185,7 +185,7 @@
       whatsappNumber: "916001877518",
       upiId: "kremchympe@upi",
       bank: {
-        name: "Team Explo Era",
+        name: "Krem Chympe Adventure",
         account: "123456789012",
         ifsc: "SBIN0001234",
         bankName: "SBI, Cherrapunji Branch"
@@ -691,7 +691,7 @@
 
       // ---- Site footer (shown at the very bottom of the home page) ----
       footer: {
-        brandName: "TEAM EXPLO ERA",
+        brandName: "TEAM CHYMPE EXPLORA",
         locationLine: "Brishyrnot, Hno: 34, Near Football Ground, Po: Lumshonong, East Jaintia Hills, Meghalaya, 793000, India",
         contactTitle: "Contact Us",
         phone: "+91 8787679579",
@@ -699,7 +699,7 @@
         followTitle: "Follow Us On",
         importantLinkTitle: "Important Link",
         refundPolicyLabel: "Refund Policy",
-        copyright: "Copyright © Team Chympe Explora. All rights reserved."
+        copyright: "Copyright © Team explo era. All rights reserved."
       },
 
       // ---- Refund Policy page (opens only when "Refund Policy" is tapped

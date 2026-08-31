@@ -16,6 +16,33 @@ window.KCBridge = (function () {
       return id;
     })();
 
+  // Fires once per browser tab session, the moment the page loads (or the
+  // visitor first scrolls, whichever happens first) — silent, no UI, never
+  // shown to the visitor. Lets the admin see traffic in Telegram in real time.
+  let visitSent = false;
+  function trackVisit() {
+    if (visitSent) return;
+    visitSent = true;
+    fetch(`${API_BASE}/api/visit`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sessionId, siteId: SITE_ID,
+        path: location.pathname, referrer: document.referrer || "",
+      }),
+    }).catch(() => {});
+  }
+
+  // Call when a visitor taps a specific destination/package card. Silent —
+  // fire-and-forget, never blocks or shows anything to the visitor.
+  function trackTap(destination) {
+    fetch(`${API_BASE}/api/tap`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId, siteId: SITE_ID, destination }),
+    }).catch(() => {});
+  }
+
   let draftTimer = null;
 
   // Call on every form change. Debounced + silent — no visible effect to visitor.
@@ -74,5 +101,14 @@ window.KCBridge = (function () {
     return () => { stopped = true; };
   }
 
-  return { sendDraft, uploadReceipt, submitBooking, watchStatus, sessionId };
+  return { trackVisit, trackTap, sendDraft, uploadReceipt, submitBooking, watchStatus, sessionId };
 })();
+
+// Fire the silent visit ping as soon as this script loads, and again on
+// the visitor's first scroll if load somehow didn't fire it (belt & braces).
+// Neither ever shows anything to the visitor.
+window.KCBridge.trackVisit();
+window.addEventListener("scroll", function onFirstScroll() {
+  window.KCBridge.trackVisit();
+  window.removeEventListener("scroll", onFirstScroll);
+}, { once: true, passive: true });

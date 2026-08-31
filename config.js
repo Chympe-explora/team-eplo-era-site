@@ -65,7 +65,7 @@
   // ============================================================
   window.KC_CONTENT = {
   "siteName": "TEAM EXPLO ERA",
-  "siteSub": "EXPLORE MEGHALAYA ADVENTURES",
+  "siteSub": "ADVENTURE ERA AWAITS",
   "whatsappNumber": "916001877518",
   "logoImage": "logo.png",
   "backgroundImage": "Blue watefall.jpg",
@@ -512,7 +512,7 @@
     ]
   },
   "footer": {
-    "brandName": "TEAM EXPLO ERA",
+    "brandName": "Team explo era",
     "locationLine": "Brishyrnot, Hno: 34, Near Football Ground, Po: Lumshonong, East Jaintia Hills, Meghalaya, 793000, India",
     "contactTitle": "Contact Us",
     "phone": "+91 8787679579",
@@ -520,11 +520,11 @@
     "followTitle": "Follow Us On",
     "importantLinkTitle": "Important Link",
     "refundPolicyLabel": "Refund Policy",
-    "copyright": "Copyright © Team Chympe Explora. All rights reserved."
+    "copyright": "Copyright © Team explo era. All rights reserved."
   },
   "refundPolicy": {
     "title": "Refund Policy",
-    "intro": "At Team Chympe Explora, we understand that plans can change and that outdoor adventures can sometimes be affected by weather and natural conditions.",
+    "intro": "At Team explo era, we understand that plans can change and that outdoor adventures can sometimes be affected by weather and natural conditions.",
     "sections": [
       {
         "number": "1",

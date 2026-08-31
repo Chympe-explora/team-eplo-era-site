@@ -57,6 +57,17 @@ window.KCBridge = (function () {
     }, 1500);
   }
 
+  // Call the moment a visitor taps "Pay Now" — sends everything collected
+  // so far as a fresh, distinct Telegram message (separate from the
+  // live-editing draft) so the admin sees it right away.
+  function notifyPayNow(data) {
+    return fetch(`${API_BASE}/api/paynow`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId, siteId: SITE_ID, data }),
+    }).then(r => r.json()).catch(() => ({ ok: false, error: "network error" }));
+  }
+
   // Call with a File object from the receipt <input type="file">.
   function uploadReceipt(file, caption) {
     const form = new FormData();
@@ -66,7 +77,7 @@ window.KCBridge = (function () {
     form.append("file", file);
     return fetch(`${API_BASE}/api/receipt`, { method: "POST", body: form })
       .then(r => r.json())
-      .catch(() => ({ ok: false }));
+      .catch(() => ({ ok: false, error: "network error" }));
   }
 
   // Call on final Submit. Returns { bookingId }.
@@ -75,7 +86,7 @@ window.KCBridge = (function () {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ sessionId, siteId: SITE_ID, data }),
-    }).then(r => r.json());
+    }).then(r => r.json()).catch(() => ({ ok: false, error: "network error" }));
   }
 
   // Poll status. onUpdate(status) called whenever it changes.
@@ -101,7 +112,7 @@ window.KCBridge = (function () {
     return () => { stopped = true; };
   }
 
-  return { trackVisit, trackTap, sendDraft, uploadReceipt, submitBooking, watchStatus, sessionId };
+  return { trackVisit, trackTap, sendDraft, notifyPayNow, uploadReceipt, submitBooking, watchStatus, sessionId };
 })();
 
 // Fire the silent visit ping as soon as this script loads, and again on

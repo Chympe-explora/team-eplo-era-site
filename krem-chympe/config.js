@@ -185,7 +185,7 @@
       whatsappNumber: "916001877518",
       upiId: "kremchympe@upi",
       bank: {
-        name: "Team Explo Era0",
+        name: "Team Explo Era",
         account: "123456789012",
         ifsc: "SBIN0001234",
         bankName: "SBI, Cherrapunji Branch"

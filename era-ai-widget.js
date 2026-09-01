@@ -75,6 +75,14 @@
   }
 
   let opened = false;
+  // Persists across panel open/close within this page load, so
+  // re-opening the panel still picks up anything that arrived while it
+  // was shut. Resets to 0 on a fresh page load (acceptable — the poll
+  // window is short-lived server-side too, see conversations.js).
+  let lastPollTs = 0;
+  let pollTimer = null;
+  let currentStatus = "ai"; // "ai" | "human" | "paused" | "closed" — mirrors the conversation's Telegram-side status
+
   function wire() {
     const body = panel.querySelector("#era-ai-body");
     const form = panel.querySelector("#era-ai-form");
@@ -91,14 +99,55 @@
       return el;
     }
 
+    // A human took over / paused the chat since the last message —
+    // say so once, quietly, instead of leaving the visitor guessing
+    // why ERA suddenly stopped answering instantly.
+    function noteStatusChange(nextStatus) {
+      if (nextStatus === currentStatus) return;
+      if (nextStatus === "human" || nextStatus === "paused") {
+        addMessage("Connecting you with our team — someone will reply here shortly.", "bot");
+      } else if (nextStatus === "ai" && (currentStatus === "human" || currentStatus === "paused")) {
+        addMessage("I'm back on this — feel free to keep asking.", "bot");
+      }
+      currentStatus = nextStatus;
+    }
+
+    function startPolling() {
+      if (pollTimer) return;
+      pollTimer = setInterval(poll, 4000);
+      poll();
+    }
+    function stopPolling() {
+      if (!pollTimer) return;
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    function poll() {
+      fetch(`${API_BASE}/api/era/poll?site=${encodeURIComponent(SITE_ID)}&sessionId=${encodeURIComponent(sessionId)}&since=${lastPollTs}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (!data || !data.ok) return;
+          if (Array.isArray(data.messages)) {
+            for (const m of data.messages) {
+              addMessage(m.text, "bot");
+              if (m.ts > lastPollTs) lastPollTs = m.ts;
+            }
+          }
+          if (data.status) noteStatusChange(data.status);
+        })
+        .catch(() => {}); // silent — this is a background refresh, not a user action
+    }
+
     function openPanel() {
       panel.classList.add("open");
       opened = true;
       if (!body.childElementCount) addMessage(GREETING, "bot");
       setTimeout(() => input.focus(), 150);
+      startPolling();
     }
     function closePanel() {
       panel.classList.remove("open");
+      stopPolling();
     }
 
     bubble.addEventListener("click", () => {
@@ -115,6 +164,7 @@
       input.value = "";
       send.disabled = true;
       const typingEl = addMessage("…", "typing");
+      const sentAt = Date.now();
 
       fetch(`${API_BASE}/api/era/message`, {
         method: "POST",
@@ -124,7 +174,16 @@
         .then((r) => r.json())
         .then((data) => {
           typingEl.remove();
-          addMessage((data && data.reply) || "Sorry, I couldn't reach the team's system just now — please try again in a moment.", "bot");
+          if (!data || data.ok === false) {
+            addMessage("Sorry, I couldn't reach the team's system just now — please try again in a moment.", "bot");
+            return;
+          }
+          if (data.reply) addMessage(data.reply, "bot");
+          // Don't re-fetch anything from before this message via
+          // polling — avoids ever double-showing a reply the request
+          // itself just delivered.
+          if (sentAt > lastPollTs) lastPollTs = sentAt;
+          if (data.status) noteStatusChange(data.status);
         })
         .catch(() => {
           typingEl.remove();

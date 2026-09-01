@@ -649,7 +649,10 @@
         sub: "Krem Chympe is India's 5th-longest cave system, with about 10.5 km of mapped passages (explorers have surveyed close to 19 km so far). A short forest trek from Khaddum Village leads you past the beautiful Chympe (Pieltleng) Waterfall to a hidden cave, an underground lake, golden mineral formations, and rare wildlife found almost nowhere else on Earth — all still untouched by crowds.",
         visitorsLabel: "Visitors",
         duration: "Full-Day Trip (3–4 Hrs Trek Each Way)",
-        priceLabel: "Starts ₹1500 Per Guide"
+        priceLabel: "Starts ₹1500 Per Guide",
+        videoUrl: "",
+        fallbackImage: window.KC_IMAGES.heroBg1,
+        enabled: true
       },
 
       // Homepage rotating background photos (file names come from KC_IMAGES above)

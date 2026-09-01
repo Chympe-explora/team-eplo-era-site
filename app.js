@@ -62,6 +62,7 @@
     ["path", { d: "m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" }],
     ["circle", { cx: 12, cy: 8, r: 6 }]
   ]);
+  var ChevronDown = makeIcon([["path", { d: "m6 9 6 6 6-6" }]]);
 
   // ---------------------------------------------------------------------
   // Shared little components
@@ -87,8 +88,16 @@
   function VideoHero(props) {
     var hero = props.hero || {};
     var videoUrl = hero.videoUrl || "";
+    // A separate on/off switch from "enabled" (which hides the whole
+    // hero) — turning this off just removes the <video> tag, so the
+    // static fallback image shows through exactly as if a video had
+    // never been set at all. Admin-controlled from Telegram.
+    var videoOn = isOn(hero.videoEnabled, true);
     var fallbackImage = hero.fallbackImage || "Trek Trail Mist.jpg";
     var logoUrl = props.logo || "logo.png";
+    var phone = (props.phone || "").trim();
+    var telHref = phone ? "tel:" + phone.replace(/[^\d+]/g, "") : "";
+    var navItems = props.navItems || [];
 
     return h(
       "div",
@@ -101,9 +110,11 @@
         }
       },
 
-      // Video element (overlaid on background; if it fails, the
-      // background image set above shows through instead)
-      videoUrl && h(
+      // Video element (overlaid on background; if it fails — or if the
+      // admin has switched it off — the background image set above
+      // shows through instead, indistinguishable from no video ever
+      // being set)
+      videoOn && videoUrl && h(
         "video",
         {
           autoPlay: true,
@@ -120,16 +131,60 @@
       // Dark overlay for text readability
       h("div", { className: "absolute inset-0 bg-black/30 z-[1]" }),
 
-      // Content: logo top, Book Now centered
+      // Content: top bar (logo left, call + menu right), quote + Book
+      // Now in the middle, Discover pinned to the bottom
       h(
         "div",
-        { className: "relative z-10 flex flex-col items-center justify-between h-full p-6 md:p-10 md:p-12" },
+        { className: "relative z-10 flex flex-col h-full p-5 md:p-8 lg:p-10" },
+
+        // ---- top bar ----
         h(
-          "div", { className: "flex-shrink-0 pt-4 md:pt-8" },
-          h("img", { src: logoUrl, alt: CONTENT.siteName || "Logo", className: "h-14 md:h-20 lg:h-24 object-contain drop-shadow-lg" })
+          "div", { className: "flex-shrink-0 flex items-center justify-between" },
+          h("img", { src: logoUrl, alt: CONTENT.siteName || "Logo", className: "h-10 md:h-14 object-contain drop-shadow-lg" }),
+          h(
+            "div", { className: "flex items-center gap-2.5" },
+            telHref && h(
+              "a",
+              {
+                href: telHref,
+                "aria-label": "Call us",
+                className: "w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/15 border border-white/25 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/25 transition"
+              },
+              h(Phone, { size: 18 })
+            ),
+            h(
+              "button",
+              {
+                onClick: props.onToggleMenu,
+                "aria-label": "Menu",
+                className: "w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/15 border border-white/25 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/25 transition"
+              },
+              props.menuOpen ? h(X, { size: 18 }) : h(Menu, { size: 18 })
+            )
+          )
         ),
+
+        // ---- dropdown menu, opened from the hero's own hamburger ----
+        props.menuOpen && h(
+          GlassCard, { className: "flex-shrink-0 mt-3 p-3 space-y-1" },
+          navItems.map(function (item) {
+            return h("button", {
+              key: item.id,
+              onClick: function () { props.onGoTo(item.id); },
+              className: "w-full text-left px-4 py-3 rounded-xl text-white bg-white/5 hover:bg-white/15 transition"
+            }, item.label);
+          }),
+          h("button", { onClick: props.onBookNow, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] text-white py-3 rounded-full font-medium mt-1 transition" }, "Book Now")
+        ),
+
+        // ---- quote + Book Now ----
         h(
-          "div", { className: "flex-grow flex items-center justify-center px-4" },
+          "div", { className: "flex-grow flex flex-col items-center justify-center gap-6 md:gap-8 px-4 text-center" },
+          hero.quote && h(
+            "p",
+            { className: "italic font-semibold text-white text-[26px] leading-[1.15] md:text-5xl lg:text-6xl max-w-[260px] md:max-w-2xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]" },
+            hero.quote
+          ),
           h(
             "button",
             {
@@ -139,7 +194,17 @@
             "Book Now"
           )
         ),
-        h("div", { className: "flex-shrink-0 h-8" })
+
+        // ---- Discover, bottom of hero — scrolls to destinations ----
+        h(
+          "button",
+          {
+            onClick: props.onDiscover,
+            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-1 text-white/90 hover:text-white transition"
+          },
+          h("span", { className: "text-[13px] md:text-sm tracking-[0.2em] font-medium" }, hero.discoverLabel || "Discover"),
+          h(ChevronDown, { size: 22 })
+        )
       )
     );
   }
@@ -563,7 +628,13 @@
       page === "home" && isOn(CONTENT.hero && CONTENT.hero.enabled, true) && h(VideoHero, {
         hero: CONTENT.hero,
         logo: CONTENT.logoImage,
-        onBookNow: function () { goTo("booking"); }
+        phone: FOOTER.phone,
+        navItems: navItems,
+        menuOpen: mobileMenuOpen,
+        onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
+        onGoTo: goTo,
+        onBookNow: function () { goTo("booking"); },
+        onDiscover: function () { goTo((CONTENT.hero && CONTENT.hero.discoverTargetId) || "destinations"); }
       }),
       page === "home" && showNotice && h(NoticePopup, {
         notice: CONTENT.notice,

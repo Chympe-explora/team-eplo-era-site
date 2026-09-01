@@ -147,7 +147,7 @@
     function noteStatusChange(nextStatus) {
       if (nextStatus === currentStatus) return;
       if (nextStatus === "human" || nextStatus === "paused") {
-        addMessage("Collecting information from my team — someone will reply here shortly.", "bot");
+        addMessage("Collecting information from my team — And reply to you.", "bot");
       } else if (nextStatus === "ai" && (currentStatus === "human" || currentStatus === "paused")) {
         addMessage("Feel free to keep asking.", "bot");
       }

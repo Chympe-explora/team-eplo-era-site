@@ -11,6 +11,16 @@
 
   var CONTENT = window.KC_CONTENT || {};
 
+  // Telegram admin edits are saved as plain text, so a boolean toggle
+  // can come back as the string "false" (which is truthy in JS) — this
+  // treats "false"/false as off and everything else as on, so on/off
+  // switches edited from the bot actually work.
+  function isOn(v, defaultOn) {
+    if (v === false || v === "false") return false;
+    if (v === true || v === "true") return true;
+    return defaultOn;
+  }
+
   // ---------------------------------------------------------------------
   // Icons (lucide-style inline SVGs)
   // ---------------------------------------------------------------------
@@ -69,6 +79,129 @@
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  // ---------------------------------------------------------------------
+  // VideoHero — full-width video background with logo + Book Now button.
+  // Shown at the top of the home page. Falls back to a static image if
+  // no video URL is set (or the video fails to load).
+  // ---------------------------------------------------------------------
+  function VideoHero(props) {
+    var hero = props.hero || {};
+    var videoUrl = hero.videoUrl || "";
+    var fallbackImage = hero.fallbackImage || "Trek Trail Mist.jpg";
+    var logoUrl = props.logo || "logo.png";
+
+    return h(
+      "div",
+      {
+        className: "relative w-full h-screen bg-cover bg-center overflow-hidden flex flex-col",
+        style: {
+          backgroundImage: "url('" + fallbackImage + "')",
+          backgroundAttachment: "fixed",
+          backgroundSize: "cover"
+        }
+      },
+
+      // Video element (overlaid on background; if it fails, the
+      // background image set above shows through instead)
+      videoUrl && h(
+        "video",
+        {
+          autoPlay: true,
+          muted: true,
+          loop: true,
+          playsInline: true,
+          className: "absolute inset-0 w-full h-full object-cover",
+          style: { opacity: 0.85 },
+          onError: function () { console.warn("Hero video failed to load, using fallback image"); }
+        },
+        h("source", { src: videoUrl, type: "video/mp4" })
+      ),
+
+      // Dark overlay for text readability
+      h("div", { className: "absolute inset-0 bg-black/30 z-[1]" }),
+
+      // Content: logo top, Book Now centered
+      h(
+        "div",
+        { className: "relative z-10 flex flex-col items-center justify-between h-full p-6 md:p-10 md:p-12" },
+        h(
+          "div", { className: "flex-shrink-0 pt-4 md:pt-8" },
+          h("img", { src: logoUrl, alt: CONTENT.siteName || "Logo", className: "h-14 md:h-20 lg:h-24 object-contain drop-shadow-lg" })
+        ),
+        h(
+          "div", { className: "flex-grow flex items-center justify-center px-4" },
+          h(
+            "button",
+            {
+              onClick: props.onBookNow,
+              className: "bg-white text-gray-900 font-bold px-10 md:px-14 py-4 md:py-5 rounded-full shadow-xl hover:bg-gray-100 hover:shadow-2xl transition-all duration-200 text-base md:text-lg lg:text-xl whitespace-nowrap"
+            },
+            "Book Now"
+          )
+        ),
+        h("div", { className: "flex-shrink-0 h-8" })
+      )
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // NoticePopup — one-time modal for new visitors (main home page only).
+  // Close state is stored in localStorage so it only shows once per
+  // browser; admin can broadcast a fresh notice via the "showAgain"
+  // flag from Telegram, which the caller compares against.
+  // ---------------------------------------------------------------------
+  function NoticePopup(props) {
+    var onClose = props.onClose;
+    var notice = props.notice || {};
+
+    if (!isOn(notice.enabled, false)) return null;
+
+    return h(
+      "div",
+      {
+        className: "fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/50 backdrop-blur-sm",
+        onClick: onClose
+      },
+      h(
+        "div",
+        {
+          className: "bg-white rounded-3xl shadow-2xl max-w-md w-full relative animate-in fade-in zoom-in-95 duration-300",
+          onClick: function (e) { e.stopPropagation(); }
+        },
+        h(
+          "button",
+          {
+            onClick: onClose,
+            className: "absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 text-2xl transition-colors",
+            "aria-label": "Close"
+          },
+          "\u2715"
+        ),
+        h(
+          "div", { className: "p-6 md:p-8 text-center" },
+          h("img", {
+            src: props.logo || "logo.png",
+            alt: "Logo",
+            className: "h-12 md:h-14 object-contain mx-auto mb-5",
+            onError: function (e) { e.target.style.display = "none"; }
+          }),
+          h("h2", { className: "text-lg md:text-2xl font-bold text-gray-900 mb-2" }, notice.title || "PUBLIC NOTICE"),
+          notice.subtitle && h("p", { className: "text-sm md:text-base text-gray-600 font-semibold mb-4" }, notice.subtitle),
+          h("div", { className: "text-gray-700 text-sm md:text-base leading-relaxed mb-6 whitespace-pre-wrap font-normal" }, notice.text || ""),
+          h(
+            "button",
+            {
+              onClick: onClose,
+              style: { backgroundColor: notice.iconBg || "#2E8B57", color: "#fff" },
+              className: "w-full font-bold py-3 md:py-4 rounded-full hover:opacity-90 transition-opacity duration-200 text-sm md:text-base"
+            },
+            notice.buttonText || "Got it"
+          )
+        )
+      )
+    );
+  }
+
   var FOOTER = CONTENT.footer || { brandName: "", locationLine: "", contactTitle: "Contact Us", phone: "", email: "", followTitle: "Follow Us On", importantLinkTitle: "Important Link", refundPolicyLabel: "Refund Policy", copyright: "" };
   var REFUND_POLICY = CONTENT.refundPolicy || { title: "Refund Policy", intro: "", sections: [], promiseTitle: "", promiseText: [] };
 
@@ -81,6 +214,24 @@
   function App() {
     var menuState = useState(false); var mobileMenuOpen = menuState[0], setMobileMenuOpen = menuState[1];
     var pageState = useState("home"); var page = pageState[0], setPage = pageState[1];
+
+    // ---- Notice popup: shows once per visitor, closable, admin-resettable ----
+    var NOTICE = CONTENT.notice || {};
+    var noticeState = useState(function () {
+      if (typeof localStorage === "undefined") return true;
+      var closedVersion = localStorage.getItem("era_notice_closed");
+      // If the admin bumps notice.showAgain, a stale closedVersion no
+      // longer matches, so the notice shows again for everyone.
+      return closedVersion !== String(NOTICE.showAgain || "");
+    });
+    var showNotice = noticeState[0], setShowNotice = noticeState[1];
+
+    function closeNotice() {
+      setShowNotice(false);
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("era_notice_closed", String(NOTICE.showAgain || ""));
+      }
+    }
 
     function goToRefundPolicy() {
       setMobileMenuOpen(false);
@@ -409,6 +560,16 @@
         h("div", { className: "absolute inset-0 bg-black/40 backdrop-blur-[1px]" }),
         h("div", { className: "absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" })
       ),
+      page === "home" && isOn(CONTENT.hero && CONTENT.hero.enabled, true) && h(VideoHero, {
+        hero: CONTENT.hero,
+        logo: CONTENT.logoImage,
+        onBookNow: function () { goTo("booking"); }
+      }),
+      page === "home" && showNotice && h(NoticePopup, {
+        notice: CONTENT.notice,
+        logo: CONTENT.logoImage,
+        onClose: closeNotice
+      }),
       header,
       page === "home"
         ? h("main", { className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-16 pt-6" }, home, visitorsRating, destinations, experiences, booking, about, footer)

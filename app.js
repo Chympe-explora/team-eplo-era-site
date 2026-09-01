@@ -140,7 +140,15 @@
         // ---- top bar ----
         h(
           "div", { className: "flex-shrink-0 flex items-center justify-between" },
-          h("img", { src: logoUrl, alt: CONTENT.siteName || "Logo", className: "h-10 md:h-14 object-contain drop-shadow-lg" }),
+          h(
+            "div", { className: "flex items-center gap-2.5" },
+            h("img", { src: logoUrl, alt: CONTENT.siteName || "Logo", className: "h-9 md:h-12 object-contain drop-shadow-lg" }),
+            h(
+              "div", { className: "leading-tight" },
+              h("div", { className: "font-bold tracking-[0.12em] text-[13px] md:text-base text-white drop-shadow" }, CONTENT.siteName),
+              h("div", { className: "text-[10px] md:text-xs tracking-[0.18em] text-white/75 -mt-0.5" }, CONTENT.siteSub)
+            )
+          ),
           h(
             "div", { className: "flex items-center gap-2.5" },
             telHref && h(

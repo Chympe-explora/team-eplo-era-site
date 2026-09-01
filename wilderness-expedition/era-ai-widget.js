@@ -1,5 +1,12 @@
 /**
- * era-ai-widget.js
+ * era-ai-widget.js [FIXED VERSION]
+ * 
+ * FIXES APPLIED:
+ * 1. SessionID now persists in localStorage across page reloads
+ *    → Solves: Chat reset when visitor closes/reopens widget
+ * 2. Polling frequency increases to 800ms for 30 seconds after sending
+ *    → Solves: Slow admin reply delivery (KV eventual consistency)
+ * 
  * Drop this on any site (after booking-bridge.js, before app.js closes —
  * see index.html). Renders a small floating "ERA AI" chat bubble and
  * talks to the same Cloudflare Worker as booking-bridge.js. No React,
@@ -8,7 +15,43 @@
 (function () {
   const API_BASE = "https://chympe-booking-backend.senlysuchiang87.workers.dev";
   const SITE_ID = window.KC_SITE_ID || "root";
-  const sessionId = (window.KCBridge && window.KCBridge.sessionId) || Math.random().toString(36).slice(2, 10);
+  
+  // ===== FIX #1: Persistent Session ID =====
+  function getOrCreateSessionId() {
+    // 1. Try KCBridge first (if site provides it)
+    if (window.KCBridge && window.KCBridge.sessionId) {
+      const kbSessionId = window.KCBridge.sessionId;
+      // Store it in localStorage in case KCBridge stops being available later
+      try {
+        localStorage.setItem("era_ai_session_id", kbSessionId);
+      } catch (e) {
+        // localStorage might be disabled (Firefox private mode, etc)
+      }
+      return kbSessionId;
+    }
+    
+    // 2. Check localStorage for previously stored ID
+    try {
+      const stored = localStorage.getItem("era_ai_session_id");
+      if (stored && stored.length > 4) {
+        return stored;
+      }
+    } catch (e) {
+      // localStorage disabled, fall back to memory
+    }
+    
+    // 3. Generate new ID and try to persist it
+    const newId = Math.random().toString(36).slice(2, 10);
+    try {
+      localStorage.setItem("era_ai_session_id", newId);
+      localStorage.setItem("era_ai_created_at", Date.now().toString());
+    } catch (e) {
+      // localStorage disabled — session will only last this page load
+    }
+    return newId;
+  }
+  
+  const sessionId = getOrCreateSessionId();
 
   const GREETING = "Hi, I'm ERA AI 🌿 Ask me about packages, pricing, what to bring, or how booking works.";
 
@@ -75,13 +118,15 @@
   }
 
   let opened = false;
-  // Persists across panel open/close within this page load, so
-  // re-opening the panel still picks up anything that arrived while it
-  // was shut. Resets to 0 on a fresh page load (acceptable — the poll
-  // window is short-lived server-side too, see conversations.js).
   let lastPollTs = 0;
   let pollTimer = null;
-  let currentStatus = "ai"; // "ai" | "human" | "paused" | "closed" — mirrors the conversation's Telegram-side status
+  let currentStatus = "ai"; // "ai" | "human" | "paused" | "closed"
+
+  // ===== FIX #2: Aggressive polling after message sent =====
+  let lastMessageTime = 0;
+  const FAST_POLL_INTERVAL = 800;   // 800ms while waiting for reply
+  const SLOW_POLL_INTERVAL = 4000;  // 4s default (original behavior)
+  const FAST_POLL_DURATION = 30000; // 30 seconds of fast polling after sending
 
   function wire() {
     const body = panel.querySelector("#era-ai-body");
@@ -99,9 +144,6 @@
       return el;
     }
 
-    // A human took over / paused the chat since the last message —
-    // say so once, quietly, instead of leaving the visitor guessing
-    // why ERA suddenly stopped answering instantly.
     function noteStatusChange(nextStatus) {
       if (nextStatus === currentStatus) return;
       if (nextStatus === "human" || nextStatus === "paused") {
@@ -112,16 +154,43 @@
       currentStatus = nextStatus;
     }
 
+    // ===== IMPROVED POLLING LOGIC =====
+    function getDesiredPollInterval() {
+      const timeSinceMessage = Date.now() - lastMessageTime;
+      return timeSinceMessage < FAST_POLL_DURATION
+        ? FAST_POLL_INTERVAL
+        : SLOW_POLL_INTERVAL;
+    }
+
+    function updatePollFrequency() {
+      // If we need to change polling frequency, reset the timer
+      const currentInterval = pollTimer ? (pollTimer._interval || SLOW_POLL_INTERVAL) : SLOW_POLL_INTERVAL;
+      const desiredInterval = getDesiredPollInterval();
+      
+      if (currentInterval !== desiredInterval) {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(poll, desiredInterval);
+        pollTimer._interval = desiredInterval;
+      }
+    }
+
     function startPolling() {
       if (pollTimer) return;
-      pollTimer = setInterval(poll, 4000);
-      poll();
+      const interval = getDesiredPollInterval();
+      pollTimer = setInterval(() => {
+        updatePollFrequency(); // Check if frequency should change
+        poll();
+      }, interval);
+      pollTimer._interval = interval;
+      poll(); // Immediate first poll
     }
+
     function stopPolling() {
       if (!pollTimer) return;
       clearInterval(pollTimer);
       pollTimer = null;
     }
+
     function poll() {
       fetch(`${API_BASE}/api/era/poll?site=${encodeURIComponent(SITE_ID)}&sessionId=${encodeURIComponent(sessionId)}&since=${lastPollTs}`)
         .then((r) => r.json())
@@ -135,7 +204,7 @@
           }
           if (data.status) noteStatusChange(data.status);
         })
-        .catch(() => {}); // silent — this is a background refresh, not a user action
+        .catch(() => {}); // silent — this is a background refresh
     }
 
     function openPanel() {
@@ -145,6 +214,7 @@
       setTimeout(() => input.focus(), 150);
       startPolling();
     }
+
     function closePanel() {
       panel.classList.remove("open");
       stopPolling();
@@ -163,6 +233,11 @@
       addMessage(text, "user");
       input.value = "";
       send.disabled = true;
+      
+      // ===== FIX #2: Track message time and update polling =====
+      lastMessageTime = Date.now();
+      updatePollFrequency(); // Switch to fast polling immediately
+      
       const typingEl = addMessage("…", "typing");
       const sentAt = Date.now();
 
@@ -179,9 +254,6 @@
             return;
           }
           if (data.reply) addMessage(data.reply, "bot");
-          // Don't re-fetch anything from before this message via
-          // polling — avoids ever double-showing a reply the request
-          // itself just delivered.
           if (sentAt > lastPollTs) lastPollTs = sentAt;
           if (data.status) noteStatusChange(data.status);
         })

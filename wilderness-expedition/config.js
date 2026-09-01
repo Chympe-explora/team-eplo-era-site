@@ -509,7 +509,10 @@
       sub: "This is not a conventional sightseeing tour. Beginning at Brichyrnot Village and continuing from Khaddum into forests, rivers, rocky terrain and secluded wilderness camps, the route gradually leaves the familiar tourist trail and moves toward the Meghalaya–Assam border — passing remote waterfalls known primarily through local exploration and hunter knowledge.",
       visitorsLabel: "Members",
       duration: "6 Days, 5 Nights",
-      priceLabel: "₹4,999 Per Person"
+      priceLabel: "₹4,999 Per Person",
+      videoUrl: "",
+      fallbackImage: window.KC_IMAGES.heroBg1,
+      enabled: true
     },
 
     backgrounds: [window.KC_IMAGES.heroBg1, window.KC_IMAGES.heroBg2],

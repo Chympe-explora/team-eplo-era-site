@@ -10,6 +10,16 @@
   var useState = React.useState, useEffect = React.useEffect, useMemo = React.useMemo, useRef = React.useRef;
 
   var CONTENT = window.KC_CONTENT;
+
+  // Telegram admin edits are saved as plain text, so a boolean toggle
+  // can come back as the string "false" (which is truthy in JS) — this
+  // treats "false"/false as off and everything else as on, so on/off
+  // switches edited from the bot actually work.
+  function isOn(v, defaultOn) {
+    if (v === false || v === "false") return false;
+    if (v === true || v === "true") return true;
+    return defaultOn;
+  }
   var PRICES = window.KC_PRICES;
   var ui = CONTENT.ui || {};
   var t = function (key, fallback) { return (ui && ui[key]) || fallback; };
@@ -168,6 +178,55 @@
       "div",
       { className: "backdrop-blur-[24px] bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.12)] rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.1)] " + (props.className || "") },
       props.children
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // VideoHero — full-width video background with logo + Book Now button.
+  // Shown at the top of page 1 (home). Falls back to a static image if
+  // no video URL is set (or the video fails to load).
+  // ---------------------------------------------------------------------
+  function VideoHero(props) {
+    var hero = props.hero || {};
+    var videoUrl = hero.videoUrl || "";
+    var fallbackImage = hero.fallbackImage || (CONTENT.backgrounds && CONTENT.backgrounds[0]) || "";
+
+    return h(
+      "div",
+      {
+        className: "relative w-full h-screen bg-cover bg-center overflow-hidden flex flex-col",
+        style: { backgroundImage: "url('" + fallbackImage + "')", backgroundAttachment: "fixed", backgroundSize: "cover" }
+      },
+      videoUrl && h(
+        "video",
+        {
+          autoPlay: true, muted: true, loop: true, playsInline: true,
+          className: "absolute inset-0 w-full h-full object-cover",
+          style: { opacity: 0.85 },
+          onError: function () { console.warn("Hero video failed to load, using fallback image"); }
+        },
+        h("source", { src: videoUrl, type: "video/mp4" })
+      ),
+      h("div", { className: "absolute inset-0 bg-black/30 z-[1]" }),
+      h(
+        "div", { className: "relative z-10 flex flex-col items-center justify-between h-full p-6 md:p-10 md:p-12" },
+        h(
+          "div", { className: "flex-shrink-0 pt-4 md:pt-8" },
+          h("img", { src: props.logo || "logo.png", alt: CONTENT.siteName || "Logo", className: "h-14 md:h-20 lg:h-24 object-contain drop-shadow-lg" })
+        ),
+        h(
+          "div", { className: "flex-grow flex items-center justify-center px-4" },
+          h(
+            "button",
+            {
+              onClick: props.onBookNow,
+              className: "bg-white text-gray-900 font-bold px-10 md:px-14 py-4 md:py-5 rounded-full shadow-xl hover:bg-gray-100 hover:shadow-2xl transition-all duration-200 text-base md:text-lg lg:text-xl whitespace-nowrap"
+            },
+            "Book Now"
+          )
+        ),
+        h("div", { className: "flex-shrink-0 h-8" })
+      )
     );
   }
 
@@ -1639,6 +1698,11 @@
         h("div", { className: "absolute inset-0 bg-black/40 backdrop-blur-[1px]" }),
         h("div", { className: "absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" })
       ),
+      page === 1 && isOn(CONTENT.hero && CONTENT.hero.enabled, true) && h(VideoHero, {
+        hero: CONTENT.hero,
+        logo: CONTENT.logoImage,
+        onBookNow: function () { setPage(2); }
+      }),
       header, page1, page2, page3, page4, page5, page6, page7, bottomNav, lightbox,
       h("style", null, "\n        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap');\n        *{font-family:Inter, Poppins, sans-serif}\n        ::-webkit-scrollbar{width:6px;height:6px}\n        ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:99px}\n      ")
     );

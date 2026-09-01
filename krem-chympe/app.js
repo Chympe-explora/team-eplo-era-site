@@ -212,7 +212,7 @@
         "div", { className: "relative z-10 flex flex-col items-center justify-between h-full p-6 md:p-10 md:p-12" },
         h(
           "div", { className: "flex-shrink-0 pt-4 md:pt-8" },
-          h("img", { src: props.logo || "logo.png", alt: CONTENT.siteName || "Logo", className: "h-14 md:h-20 lg:h-24 object-contain drop-shadow-lg" })
+          h("div", { className: "font-bold tracking-[0.15em] text-xl md:text-3xl lg:text-4xl text-white drop-shadow-lg" }, CONTENT.siteName || "")
         ),
         h(
           "div", { className: "flex-grow flex items-center justify-center px-4" },

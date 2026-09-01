@@ -198,7 +198,7 @@
       if (images.length < 2) return undefined;
       var timer = setInterval(function () {
         setIdx(function (i) { return (i + 1) % images.length; });
-      }, props.intervalMs || 4000);
+      }, props.intervalMs || 5500);
       return function () { clearInterval(timer); };
     }, [images.length]);
 
@@ -208,7 +208,13 @@
 
     return h(
       "div", { className: "relative mt-4 rounded-xl overflow-hidden aspect-[16/9] bg-black/20" },
-      h("img", { key: safeIdx, src: images[safeIdx], className: "w-full h-full object-cover" }),
+      images.map(function (src, i) {
+        return h("img", {
+          key: i,
+          src: src,
+          className: "absolute inset-0 w-full h-full object-cover transition-opacity duration-[1400ms] ease-in-out " + (i === safeIdx ? "opacity-100" : "opacity-0")
+        });
+      }),
       images.length > 1 && h(
         "div", { className: "absolute inset-0 flex items-center justify-between px-2" },
         h(
@@ -357,6 +363,8 @@
     var menuState = useState(false); var mobileMenuOpen = menuState[0], setMobileMenuOpen = menuState[1];
     var galleryState = useState("All"); var galleryFilter = galleryState[0], setGalleryFilter = galleryState[1];
     var GALLERY_PAGE = CONTENT.galleryPage || { subtitle: "", filters: ["All"], viewAllLabel: "" };
+    var lightboxState = useState(null); var lightboxImage = lightboxState[0], setLightboxImage = lightboxState[1];
+    function toggleLightbox(src) { setLightboxImage(function (cur) { return cur === src ? null : src; }); }
 
     var contactState = useState({ name: "", whatsapp: "", date: "", specialRequest: "" });
     var contact = contactState[0], setContact = contactState[1];
@@ -1002,7 +1010,11 @@
         ),
         h("div", { className: "mt-6 grid grid-cols-12 gap-3 auto-rows-[140px]" }, CONTENT.galleryImages.filter(function (p) { return galleryFilter === "All" || p.cat === galleryFilter; }).map(function (p) {
           return h(
-            "div", { key: p.id, className: p.span + " rounded-[16px] overflow-hidden border border-white/10 relative group" },
+            "div", {
+              key: p.id,
+              className: p.span + " rounded-[16px] overflow-hidden border border-white/10 relative group cursor-pointer",
+              onClick: function () { toggleLightbox(p.src); }
+            },
             h("img", { src: p.src, className: "w-full h-full object-cover group-hover:scale-110 transition duration-700" }),
             h("div", { className: "absolute inset-0 bg-black/10 group-hover:bg-black/0 transition" }),
             h("div", { className: "absolute bottom-2 left-2 px-2 py-1 rounded-full bg-black/50 backdrop-blur text-[10px] border border-white/10" }, p.cat)
@@ -1600,6 +1612,25 @@
       )
     );
 
+    // ---- Gallery lightbox (tap a gallery photo to expand it to full
+    // size with a smooth scale/fade transition; tap again to shrink it
+    // back down). Stays mounted at all times so the CSS transition can
+    // animate both opening and closing instead of popping in/out.
+    var lightbox = h(
+      "div",
+      {
+        className: "fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10 transition-opacity duration-300 ease-out " + (lightboxImage ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"),
+        onClick: function () { setLightboxImage(null); },
+        "aria-hidden": lightboxImage ? "false" : "true"
+      },
+      h("div", { className: "absolute inset-0 bg-black/85 backdrop-blur-sm" }),
+      h("img", {
+        src: lightboxImage || "",
+        onClick: function (e) { e.stopPropagation(); setLightboxImage(null); },
+        className: "relative max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-all duration-300 ease-out cursor-pointer " + (lightboxImage ? "scale-100 opacity-100" : "scale-75 opacity-0")
+      })
+    );
+
     return h(
       "div", { className: "min-h-screen text-white font-[Inter,Poppins,sans-serif] relative selection:bg-emerald-500/30" },
       h(
@@ -1608,7 +1639,7 @@
         h("div", { className: "absolute inset-0 bg-black/40 backdrop-blur-[1px]" }),
         h("div", { className: "absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" })
       ),
-      header, page1, page2, page3, page4, page5, page6, page7, bottomNav,
+      header, page1, page2, page3, page4, page5, page6, page7, bottomNav, lightbox,
       h("style", null, "\n        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap');\n        *{font-family:Inter, Poppins, sans-serif}\n        ::-webkit-scrollbar{width:6px;height:6px}\n        ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:99px}\n      ")
     );
   }

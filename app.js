@@ -8,6 +8,7 @@
   "use strict";
   var h = React.createElement;
   var useState = React.useState;
+  var useEffect = React.useEffect;
 
   var CONTENT = window.KC_CONTENT || {};
 

@@ -171,8 +171,19 @@
     },
 
     nav: {
-      items: ["Home", "Explore", "Package", "Gallery", "Booking", "Contact"],
-      mobileItems: ["Home", "Package", "Gallery"]
+      items: [
+        { label: "Home", target: "home" },
+        { label: "Explore", target: "explore" },
+        { label: "Package", target: "packages" },
+        { label: "Gallery", target: "gallery" },
+        { label: "Booking", target: "booking" },
+        { label: "Contact", target: "contact" }
+      ],
+      mobileItems: [
+        { label: "Home", target: "home" },
+        { label: "Package", target: "packages" },
+        { label: "Gallery", target: "gallery" }
+      ]
     },
 
     trustBar: {

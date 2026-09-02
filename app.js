@@ -275,6 +275,174 @@
     );
   }
 
+  // ---------------------------------------------------------------------
+  // RatingsSection — visitors rate the website (1-5 stars) and leave an
+  // optional comment. Shown below the main home page content. Talks
+  // directly to the same Cloudflare Worker as booking-bridge.js /
+  // era-ai-widget.js (no build step, plain fetch): GET /api/ratings to
+  // load the average + breakdown + recent reviews, POST /api/ratings to
+  // submit a new one. Every new rating is also pushed straight to the
+  // Telegram admin chat, and is browsable/deletable from the bot's
+  // "⭐ Visitor Ratings" menu — see ratings.js on the backend.
+  // ---------------------------------------------------------------------
+  function Stars(props) {
+    var value = props.value || 0;
+    var size = props.size || 16;
+    var stars = [];
+    for (var i = 1; i <= 5; i++) {
+      stars.push(h("span", { key: i, style: { color: i <= Math.round(value) ? "#facc15" : "rgba(255,255,255,0.25)", fontSize: size, lineHeight: 1 } }, "\u2605"));
+    }
+    return h("span", null, stars);
+  }
+
+  function RatingsSection() {
+    var API_BASE = "https://chympe-booking-backend.senlysuchiang87.workers.dev";
+    var siteId = window.KC_SITE_ID || "root";
+
+    var dataState = useState(null); var ratingsData = dataState[0], setRatingsData = dataState[1];
+    var formState = useState({ name: "", rating: 0, comment: "" }); var form = formState[0], setForm = formState[1];
+    var hoverState = useState(0); var hoverStar = hoverState[0], setHoverStar = hoverState[1];
+    var submittingState = useState(false); var submitting = submittingState[0], setSubmitting = submittingState[1];
+    var doneState = useState(false); var justSubmitted = doneState[0], setJustSubmitted = doneState[1];
+    var errorState = useState(""); var error = errorState[0], setError = errorState[1];
+
+    function loadRatings() {
+      fetch(API_BASE + "/api/ratings?site=" + encodeURIComponent(siteId))
+        .then(function (r) { return r.json(); })
+        .then(function (data) { if (data && data.ok) setRatingsData(data); })
+        .catch(function () {});
+    }
+    useEffect(function () { loadRatings(); }, []);
+
+    function submitRating(e) {
+      e.preventDefault();
+      if (!form.rating) { setError("Tap a star to rate us first."); return; }
+      setError("");
+      setSubmitting(true);
+      fetch(API_BASE + "/api/ratings", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          site: siteId, name: form.name, rating: form.rating, comment: form.comment,
+          sessionId: (window.KCBridge && window.KCBridge.sessionId) || ""
+        }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data && data.ok) {
+            setJustSubmitted(true);
+            setForm({ name: "", rating: 0, comment: "" });
+            loadRatings();
+          } else {
+            setError("Something went wrong — please try again.");
+          }
+        })
+        .catch(function () { setError("Something went wrong — please try again."); })
+        .finally(function () { setSubmitting(false); });
+    }
+
+    var average = ratingsData ? ratingsData.average : 0;
+    var count = ratingsData ? ratingsData.count : 0;
+    var breakdown = (ratingsData && ratingsData.breakdown) || {};
+    var reviews = (ratingsData && ratingsData.ratings) || [];
+
+    return h(
+      "section", { id: "ratings", className: "scroll-mt-24 space-y-6" },
+      h(
+        "div", { className: "text-center" },
+        h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight" }, "Visitor Ratings"),
+        h("p", { className: "text-white/60 text-sm mt-1" }, "See what past travelers say, or leave your own rating.")
+      ),
+
+      h(
+        GlassCard, { className: "p-6 md:p-10 grid md:grid-cols-[auto_1fr] gap-8 items-center" },
+        h(
+          "div", { className: "text-center md:border-r md:border-white/10 md:pr-10" },
+          h("div", { className: "text-5xl font-bold" }, average || "\u2013"),
+          h(Stars, { value: average, size: 20 }),
+          h("div", { className: "text-white/60 text-xs mt-1.5" }, count + (count === 1 ? " rating" : " ratings"))
+        ),
+        h(
+          "div", { className: "space-y-2 w-full" },
+          [5, 4, 3, 2, 1].map(function (star) {
+            var n = breakdown[star] || 0;
+            var pct = count ? Math.round((n / count) * 100) : 0;
+            return h(
+              "div", { key: star, className: "flex items-center gap-2.5 text-xs" },
+              h("span", { className: "w-8 text-white/60" }, star + "\u2605"),
+              h("div", { className: "flex-1 h-2 rounded-full bg-white/10 overflow-hidden" }, h("div", { className: "h-full bg-amber-400 rounded-full", style: { width: pct + "%" } })),
+              h("span", { className: "w-6 text-white/40 text-right" }, n)
+            );
+          })
+        )
+      ),
+
+      h(
+        GlassCard, { className: "p-6 md:p-8 max-w-[560px] mx-auto" },
+        justSubmitted
+          ? h(
+              "div", { className: "text-center py-4" },
+              h("div", { className: "text-3xl mb-2" }, "\ud83d\ude4f"),
+              h("div", { className: "font-semibold" }, "Thanks for your rating!"),
+              h("button", { onClick: function () { setJustSubmitted(false); }, className: "mt-4 text-sm text-emerald-400 hover:underline" }, "Leave another")
+            )
+          : h(
+              "form", { onSubmit: submitRating, className: "space-y-4" },
+              h(
+                "div", { className: "flex items-center justify-center gap-1" },
+                [1, 2, 3, 4, 5].map(function (i) {
+                  var filled = i <= (hoverStar || form.rating);
+                  return h(
+                    "button",
+                    {
+                      key: i, type: "button",
+                      onMouseEnter: function () { setHoverStar(i); },
+                      onMouseLeave: function () { setHoverStar(0); },
+                      onClick: function () { setForm(Object.assign({}, form, { rating: i })); },
+                      className: "text-4xl leading-none transition-transform hover:scale-110",
+                      style: { color: filled ? "#facc15" : "rgba(255,255,255,0.25)" },
+                      "aria-label": i + " star" + (i > 1 ? "s" : "")
+                    },
+                    "\u2605"
+                  );
+                })
+              ),
+              h("input", {
+                type: "text", value: form.name, placeholder: "Your name (optional)",
+                onChange: function (e) { setForm(Object.assign({}, form, { name: e.target.value })); },
+                className: "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-white/30"
+              }),
+              h("textarea", {
+                value: form.comment, placeholder: "Tell us about your trip (optional)", rows: 3,
+                onChange: function (e) { setForm(Object.assign({}, form, { comment: e.target.value })); },
+                className: "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-white/30 resize-none"
+              }),
+              error && h("div", { className: "text-red-400 text-xs text-center" }, error),
+              h(
+                "button",
+                { type: "submit", disabled: submitting, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] disabled:opacity-60 py-3 rounded-full text-sm font-semibold transition" },
+                submitting ? "Submitting\u2026" : "Submit Rating"
+              )
+            )
+      ),
+
+      reviews.length > 0 && h(
+        "div", { className: "grid md:grid-cols-2 gap-4" },
+        reviews.slice(0, 6).map(function (r) {
+          return h(
+            GlassCard, { key: r.id, className: "p-5" },
+            h(
+              "div", { className: "flex items-center justify-between mb-2" },
+              h("span", { className: "font-semibold text-sm" }, r.name),
+              h(Stars, { value: r.rating, size: 14 })
+            ),
+            r.comment && h("p", { className: "text-white/70 text-sm leading-relaxed" }, r.comment)
+          );
+        })
+      )
+    );
+  }
+
   var FOOTER = CONTENT.footer || { brandName: "", locationLine: "", contactTitle: "Contact Us", phone: "", email: "", followTitle: "Follow Us On", importantLinkTitle: "Important Link", refundPolicyLabel: "Refund Policy", copyright: "" };
   var REFUND_POLICY = CONTENT.refundPolicy || { title: "Refund Policy", intro: "", sections: [], promiseTitle: "", promiseText: [] };
 
@@ -292,7 +460,7 @@
     var NOTICE = CONTENT.notice || {};
     var noticeState = useState(function () {
       if (typeof localStorage === "undefined") return true;
-      var closedVersion = localStorage.getItem("era_notice_closed");
+      var closedVersion = localStorage.getItem("era_notice_closed_" + (window.KC_SITE_ID || "site"));
       // If the admin bumps notice.showAgain, a stale closedVersion no
       // longer matches, so the notice shows again for everyone.
       return closedVersion !== String(NOTICE.showAgain || "");
@@ -302,7 +470,7 @@
     function closeNotice() {
       setShowNotice(false);
       if (typeof localStorage !== "undefined") {
-        localStorage.setItem("era_notice_closed", String(NOTICE.showAgain || ""));
+        localStorage.setItem("era_notice_closed_" + (window.KC_SITE_ID || "site"), String(NOTICE.showAgain || ""));
       }
     }
 
@@ -551,6 +719,9 @@
       )
     );
 
+    // ---- Visitor Ratings -------------------------------------------------
+    var ratingsSection = h(RatingsSection, null);
+
     // ---- Footer -------------------------------------------------------
     var footer = h(
       "footer", { className: "pt-6" },
@@ -651,7 +822,7 @@
       }),
       header,
       page === "home"
-        ? h("main", { className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-16 pt-6" }, home, visitorsRating, destinations, experiences, booking, about, footer)
+        ? h("main", { className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-16 pt-6" }, home, visitorsRating, destinations, experiences, booking, about, ratingsSection, footer)
         : refundPolicyPage,
       h("style", null, "\n        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap');\n        *{font-family:Inter, Poppins, sans-serif}\n        ::-webkit-scrollbar{width:6px;height:6px}\n        ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:99px}\n        .scroll-mt-24{scroll-margin-top:6rem}\n      ")
     );

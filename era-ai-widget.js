@@ -85,7 +85,12 @@
     .era-msg{max-width:85%;padding:8px 12px;border-radius:14px;font-size:12.5px;white-space:pre-wrap;word-break:break-word;}
     .era-msg.bot{align-self:flex-start;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.08);}
     .era-msg.user{align-self:flex-end;background:#2E8B57;color:#fff;}
-    .era-msg.typing{align-self:flex-start;background:rgba(255,255,255,0.08);opacity:.7;}
+    .era-msg.typing{align-self:flex-start;background:rgba(255,255,255,0.08);display:flex;gap:4px;padding:11px 14px;}
+    .era-msg.typing .era-dot{width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,0.55);
+      animation:era-typing-bounce 1.2s infinite ease-in-out;}
+    .era-msg.typing .era-dot:nth-child(2){animation-delay:.15s;}
+    .era-msg.typing .era-dot:nth-child(3){animation-delay:.3s;}
+    @keyframes era-typing-bounce{0%,60%,100%{transform:translateY(0);opacity:.5;}30%{transform:translateY(-4px);opacity:1;}}
     #era-ai-form{display:flex;gap:8px;padding:10px 12px;border-top:1px solid rgba(255,255,255,0.1);}
     #era-ai-input{flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);
       border-radius:9999px;padding:8px 14px;color:#fff;font-size:12.5px;outline:none;}
@@ -172,18 +177,49 @@
       return el;
     }
 
+    // ===== Persistent "waiting for a reply" bubble =====
+    // Shows an animated three-dot bubble (the same visual idiom WhatsApp
+    // uses) from the moment a message is sent until a real reply arrives
+    // via poll — instead of flashing briefly and vanishing before anyone
+    // has actually replied. We can't detect the admin's literal typing
+    // state (Telegram's Bot API doesn't expose that for a human texting a
+    // bot), so this bubble means "delivered, a reply is expected" rather
+    // than a live keystroke signal — but it stays up for as long as that's
+    // true, which is what actually reads as "live" to a visitor.
+    let waitingEl = null;
+    let waitingForReply = false;
+    function showWaitingBubble() {
+      if (waitingEl) return;
+      waitingForReply = true;
+      waitingEl = document.createElement("div");
+      waitingEl.className = "era-msg typing";
+      waitingEl.innerHTML = '<span class="era-dot"></span><span class="era-dot"></span><span class="era-dot"></span>';
+      body.appendChild(waitingEl);
+      body.scrollTop = body.scrollHeight;
+      updatePollFrequency();
+    }
+    function hideWaitingBubble() {
+      waitingForReply = false;
+      if (waitingEl) { waitingEl.remove(); waitingEl = null; }
+    }
+
     function noteStatusChange(nextStatus) {
       if (nextStatus === currentStatus) return;
       if (nextStatus === "human" || nextStatus === "paused") {
         addMessage("Thanks — that's been sent to our team. They'll reply to you right here.", "bot");
       } else if (nextStatus === "ai" && (currentStatus === "human" || currentStatus === "paused")) {
+        hideWaitingBubble(); // the AI won't retroactively answer an already-sent message
         addMessage("Our assistant will help you from here — feel free to keep asking.", "bot");
       }
       currentStatus = nextStatus;
     }
 
     // ===== IMPROVED POLLING LOGIC =====
+    // Stays on the fast interval for as long as a reply is genuinely
+    // pending (waitingForReply), not just for a fixed 30s window — so a
+    // reply typed a minute later still arrives at the fast cadence.
     function getDesiredPollInterval() {
+      if (waitingForReply) return FAST_POLL_INTERVAL;
       const timeSinceMessage = Date.now() - lastMessageTime;
       return timeSinceMessage < FAST_POLL_DURATION
         ? FAST_POLL_INTERVAL
@@ -224,11 +260,13 @@
         .then((r) => r.json())
         .then((data) => {
           if (!data || !data.ok) return;
-          if (Array.isArray(data.messages)) {
+          if (Array.isArray(data.messages) && data.messages.length) {
+            hideWaitingBubble();
             for (const m of data.messages) {
               addMessage(m.text, "bot");
               if (m.ts > lastPollTs) lastPollTs = m.ts;
             }
+            updatePollFrequency(); // drop back off the fast interval now that the reply landed
           }
           if (data.status) noteStatusChange(data.status);
         })
@@ -266,7 +304,7 @@
       lastMessageTime = Date.now();
       updatePollFrequency(); // Switch to fast polling immediately
       
-      const typingEl = addMessage("…", "typing");
+      showWaitingBubble();
       const sentAt = Date.now();
 
       fetch(`${API_BASE}/api/era/message`, {
@@ -276,17 +314,23 @@
       })
         .then((r) => r.json())
         .then((data) => {
-          typingEl.remove();
           if (!data || data.ok === false) {
+            hideWaitingBubble();
             addMessage("Sorry, I couldn't reach the team's system just now — please try again in a moment.", "bot");
             return;
           }
-          if (data.reply) addMessage(data.reply, "bot");
+          if (data.reply) {
+            // AI answered inline — no human reply pending.
+            hideWaitingBubble();
+            addMessage(data.reply, "bot");
+          }
+          // else: no reply yet (human/paused mode) — leave the waiting
+          // bubble up; poll() will replace it with the real reply.
           if (sentAt > lastPollTs) lastPollTs = sentAt;
           if (data.status) noteStatusChange(data.status);
         })
         .catch(() => {
-          typingEl.remove();
+          hideWaitingBubble();
           addMessage("I'm having trouble connecting right now — please try again in a moment, or tap Book Now for direct help.", "bot");
         })
         .finally(() => {

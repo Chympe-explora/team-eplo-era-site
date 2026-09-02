@@ -219,7 +219,7 @@
         {
           autoPlay: true, muted: true, loop: true, playsInline: true,
           className: "absolute inset-0 w-full h-full object-cover",
-          style: { opacity: 1.85 },
+          style: { opacity: 1 },
           onError: function () { console.warn("Hero video failed to load, using fallback image"); }
         },
         h("source", { src: videoUrl, type: "video/mp4" })
@@ -1899,7 +1899,7 @@
         menuOpen: mobileMenuOpen,
         onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
         onNavClick: onHeroNavClick,
-        onBookNow: function () { setPage(2); },
+        onBookNow: function () { goToPackage("sharedTour"); },
         onDiscover: function () {
           var el = document.getElementById("kc-content-start");
           if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });

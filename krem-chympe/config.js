@@ -651,7 +651,7 @@
         duration: "Full-Day Trip (3–4 Hrs Trek Each Way)",
         priceLabel: "Starts ₹1500 Per Guide",
         quote: "Symphony in the mist.", // Editable from the Telegram admin bot → ✏️ Edit Website Text → Hero → Quote
-        videoUrl: "",
+        videoUrl: "hero-video.mp4",
         videoEnabled: true, // Telegram admin bot → ✏️ Edit Website Text → Hero → Video Enabled (tap to switch on/off)
         fallbackImage: window.KC_IMAGES.heroBg1,
         enabled: true,

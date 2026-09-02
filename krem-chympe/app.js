@@ -219,7 +219,7 @@
         {
           autoPlay: true, muted: true, loop: true, playsInline: true,
           className: "absolute inset-0 w-full h-full object-cover",
-          style: { opacity: 1.85 },
+          style: { opacity: 0.85 },
           onError: function () { console.warn("Hero video failed to load, using fallback image"); }
         },
         h("source", { src: videoUrl, type: "video/mp4" })
@@ -285,8 +285,13 @@
           "div", { className: "flex-grow flex flex-col items-center justify-center gap-6 md:gap-8 px-4 text-center" },
           hero.quote && h(
             "p",
-            { className: "italic font-semibold text-white text-[26px] leading-[1.15] md:text-5xl lg:text-6xl max-w-[260px] md:max-w-2xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]" },
-            hero.quote
+            { className: "italic font-semibold text-white text-[24px] leading-[1.25] md:text-5xl lg:text-6xl max-w-[320px] md:max-w-2xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]" },
+            h("span", null, hero.quote.split("—")[0].trim()),
+            hero.quote.indexOf("—") !== -1 && h(
+              "span",
+              { className: "block mt-3 text-[16px] md:text-2xl not-italic font-normal text-white/80" },
+              "— " + hero.quote.split("—").slice(1).join("—").trim()
+            )
           ),
           h(
             "button",

@@ -123,7 +123,7 @@
           loop: true,
           playsInline: true,
           className: "absolute inset-0 w-full h-full object-cover",
-          style: { opacity: 0.85 },
+          style: { opacity: 1.85 },
           onError: function () { console.warn("Hero video failed to load, using fallback image"); }
         },
         h("source", { src: videoUrl, type: "video/mp4" })

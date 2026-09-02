@@ -1,16 +1,23 @@
 /**
- * era-ai-widget.js [FIXED VERSION]
- * 
- * FIXES APPLIED:
+ * era-ai-widget.js — the visitor-facing live chat box.
+ *
+ * This is a direct chat line to a real person on the team, NOT an
+ * automatic chatbot: whatever the visitor types is forwarded straight to
+ * the admin's Telegram, and whatever the admin types back in Telegram
+ * (or a "🤖 AI" conversation explicitly switched on from Telegram) shows
+ * up here. Nothing replies on its own unless the admin has turned the
+ * optional AI assistant on for that specific conversation.
+ *
+ * FIXES APPLIED (kept from the previous version):
  * 1. SessionID now persists in localStorage across page reloads
  *    → Solves: Chat reset when visitor closes/reopens widget
  * 2. Polling frequency increases to 800ms for 30 seconds after sending
  *    → Solves: Slow admin reply delivery (KV eventual consistency)
- * 
+ *
  * Drop this on any site (after booking-bridge.js, before app.js closes —
- * see index.html). Renders a small floating "ERA AI" chat bubble and
- * talks to the same Cloudflare Worker as booking-bridge.js. No React,
- * no build step — plain DOM, matches the site's dark glassmorphism look.
+ * see index.html). Renders a small floating chat bubble and talks to the
+ * same Cloudflare Worker as booking-bridge.js. No React, no build step —
+ * plain DOM, matches the site's dark glassmorphism look.
  */
 (function () {
   const API_BASE = "https://chympe-booking-backend.senlysuchiang87.workers.dev";
@@ -53,7 +60,7 @@
   
   const sessionId = getOrCreateSessionId();
 
-  const GREETING = "Hi, I'm ERA AI 🌿 Ask me about packages, pricing, what to bring, or how booking works.";
+  const GREETING = "Hi 👋 Send us a message here and a real person on our team will reply to you right in this chat.";
 
   const style = document.createElement("style");
   style.textContent = `
@@ -91,19 +98,19 @@
 
   const bubble = document.createElement("div");
   bubble.id = "era-ai-bubble";
-  bubble.setAttribute("aria-label", "Chat with ERA AI");
+  bubble.setAttribute("aria-label", "Chat with our team");
   bubble.textContent = "🌿";
 
   const panel = document.createElement("div");
   panel.id = "era-ai-panel";
   panel.innerHTML = `
     <div id="era-ai-head">
-      <div class="title">🌿 ERA AI</div>
+      <div class="title">🌿 Chat with Us</div>
       <button id="era-ai-close" aria-label="Close chat">✕</button>
     </div>
     <div id="era-ai-body"></div>
     <form id="era-ai-form">
-      <input id="era-ai-input" type="text" autocomplete="off" placeholder="Ask ERA AI something…" />
+      <input id="era-ai-input" type="text" autocomplete="off" placeholder="Type a message…" />
       <button id="era-ai-send" type="submit" aria-label="Send">➤</button>
     </form>
   `;
@@ -135,6 +142,27 @@
     const send = panel.querySelector("#era-ai-send");
     const closeBtn = panel.querySelector("#era-ai-close");
 
+    // ===== Live "…is typing" bubble in the admin's Telegram, WhatsApp-
+    // style, while the visitor is composing a message (before they hit
+    // Send). Throttled to roughly once every 4s while they keep typing —
+    // Telegram's own typing bubble already lasts ~5s, so this just keeps
+    // re-triggering it without hammering the API on every keystroke.
+    let lastTypingPing = 0;
+    const TYPING_PING_INTERVAL = 4000;
+    function pingTyping() {
+      const now = Date.now();
+      if (now - lastTypingPing < TYPING_PING_INTERVAL) return;
+      lastTypingPing = now;
+      fetch(`${API_BASE}/api/era/typing`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ site: SITE_ID, sessionId }),
+      }).catch(() => {}); // silent — a missed typing bubble should never matter
+    }
+    input.addEventListener("input", () => {
+      if (input.value.trim()) pingTyping();
+    });
+
     function addMessage(text, who) {
       const el = document.createElement("div");
       el.className = "era-msg " + who;
@@ -147,9 +175,9 @@
     function noteStatusChange(nextStatus) {
       if (nextStatus === currentStatus) return;
       if (nextStatus === "human" || nextStatus === "paused") {
-        addMessage("Collecting information from my team — And reply to you.", "bot");
+        addMessage("Thanks — that's been sent to our team. They'll reply to you right here.", "bot");
       } else if (nextStatus === "ai" && (currentStatus === "human" || currentStatus === "paused")) {
-        addMessage("Feel free to keep asking.", "bot");
+        addMessage("Our assistant will help you from here — feel free to keep asking.", "bot");
       }
       currentStatus = nextStatus;
     }

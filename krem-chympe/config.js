@@ -650,9 +650,25 @@
         visitorsLabel: "Visitors",
         duration: "Full-Day Trip (3–4 Hrs Trek Each Way)",
         priceLabel: "Starts ₹1500 Per Guide",
+        quote: "Symphony in the mist.", // Editable from the Telegram admin bot → ✏️ Edit Website Text → Hero → Quote
         videoUrl: "",
+        videoEnabled: true, // Telegram admin bot → ✏️ Edit Website Text → Hero → Video Enabled (tap to switch on/off)
         fallbackImage: window.KC_IMAGES.heroBg1,
-        enabled: true
+        enabled: true,
+        discoverLabel: "Discover"
+      },
+
+      // Public notice popup — fully controlled from the Telegram admin bot
+      // (✏️ Edit Website Text → Notice). When "enabled" is off, this
+      // renders nothing at all — exactly as if it never existed.
+      notice: {
+        enabled: false,
+        title: "PUBLIC NOTICE",
+        subtitle: "",
+        text: "",
+        buttonText: "Got it",
+        iconBg: "#2E8B57",
+        showAgain: ""
       },
 
       // Homepage rotating background photos (file names come from KC_IMAGES above)

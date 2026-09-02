@@ -45,8 +45,21 @@ window.KCBridge = (function () {
 
   let draftTimer = null;
 
-  // Call on every form change. Debounced + silent — no visible effect to visitor.
-  function sendDraft(data) {
+  // Call on every form change. Debounced (silent, no visible effect to
+  // the visitor) by default. Pass immediate=true to send right away
+  // instead — used when the visitor taps Next/Back between booking
+  // steps, so the admin sees a fresh line in Telegram exactly at that
+  // moment rather than waiting out the debounce.
+  function sendDraft(data, immediate) {
+    if (immediate) {
+      clearTimeout(draftTimer);
+      fetch(`${API_BASE}/api/draft`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId, siteId: SITE_ID, data }),
+      }).catch(() => {});
+      return;
+    }
     clearTimeout(draftTimer);
     draftTimer = setTimeout(() => {
       fetch(`${API_BASE}/api/draft`, {

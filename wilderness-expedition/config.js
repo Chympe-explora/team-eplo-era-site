@@ -511,7 +511,7 @@
       duration: "6 Days, 5 Nights",
       priceLabel: "₹4,999 Per Person",
       quote: "Symphony in the mist.", // Editable from the Telegram admin bot → ✏️ Edit Website Text → Hero → Quote
-      videoUrl: "hero-video.mp4",
+      videoUrl: "",
       videoEnabled: true, // Telegram admin bot → ✏️ Edit Website Text → Hero → Video Enabled (tap to switch on/off)
       fallbackImage: window.KC_IMAGES.heroBg1,
       enabled: true,

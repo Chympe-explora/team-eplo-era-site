@@ -270,12 +270,13 @@
         // ---- dropdown menu, opened from the hero's own hamburger ----
         props.menuOpen && h(
           GlassCard, { className: "flex-shrink-0 mt-3 p-3 space-y-1" },
-          navItems.map(function (item) {
+          navItems.map(function (item, i) {
+            var label = typeof item === "string" ? item : (item && item.label) || "";
             return h("button", {
-              key: item,
+              key: label + i,
               onClick: function () { props.onNavClick(item); },
               className: "w-full text-left px-4 py-3 rounded-xl text-white bg-white/5 hover:bg-white/15 transition"
-            }, item);
+            }, label);
           }),
           h("button", { onClick: props.onBookNow, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] text-white py-3 rounded-full font-medium mt-1 transition" }, "Book Now")
         ),
@@ -1001,8 +1002,31 @@
     }
 
     // ---- Nav items shared by the header and the hero's own dropdown ----
+    // Each item can be admin-configured (via the Telegram bot) as either
+    // a plain string (old format — always routes non-Home items to the
+    // Packages page, for backward compatibility) or a { label, target }
+    // object where target is the page number to jump to. This is what
+    // lets the admin point "Gallery" or "Contact" somewhere other than
+    // Packages without touching this file again.
+    function navLabel(item) { return typeof item === "string" ? item : (item && item.label) || ""; }
+    function navTarget(item) {
+      if (typeof item === "string") return item === "Home" ? 1 : 2;
+      var t = item && Number(item.target);
+      return t && !isNaN(t) ? t : 2;
+    }
+    // Handles the two extra destination kinds the admin bot can set on a
+    // nav item beyond a plain page jump: an external "url", or
+    // "whatsapp": true to open a WhatsApp chat.
+    function navigateItem(item) {
+      if (item && typeof item === "object") {
+        if (item.url) { setMobileMenuOpen(false); window.open(item.url, item.newTab === false ? "_self" : "_blank"); return; }
+        if (item.whatsapp) { setMobileMenuOpen(false); window.open("https://wa.me/" + (CONTENT.whatsappNumber || ""), "_blank"); return; }
+      }
+      setMobileMenuOpen(false);
+      setPage(navTarget(item));
+    }
     var navItems = (CONTENT.nav && CONTENT.nav.items) || ["Home", "Explore", "Packages", "Gallery", "Booking", "Contact"];
-    function onHeroNavClick(item) { setMobileMenuOpen(false); setPage(item === "Home" ? 1 : 2); }
+    function onHeroNavClick(item) { navigateItem(item); }
 
     // ---- Header ----------------------------------------------------
     var header = h(
@@ -1022,12 +1046,12 @@
         ),
         h(
           "nav", { className: "hidden md:flex items-center gap-1 bg-white/[0.06] border border-white/10 rounded-full p-1.5 backdrop-blur-xl" },
-          (CONTENT.nav && CONTENT.nav.items || ["Home", "Explore", "Packages", "Gallery", "Booking", "Contact"]).map(function (p, i) {
+          navItems.map(function (p, i) {
             return h("button", {
-              key: p,
-              onClick: function () { setPage(p === "Home" ? 1 : 2); },
+              key: navLabel(p) + i,
+              onClick: function () { navigateItem(p); },
               className: "px-4 py-1.5 rounded-full text-[13px] transition " + (i === 0 && page === 1 ? "bg-white text-black" : "text-white/80 hover:text-white hover:bg-white/10")
-            }, p);
+            }, navLabel(p));
           })
         ),
         h(
@@ -1040,10 +1064,10 @@
         GlassCard, { className: "md:hidden mt-3 p-4 max-w-[1280px] mx-auto space-y-2" },
         (CONTENT.nav && CONTENT.nav.mobileItems || ["Home", "Packages", "Gallery"]).map(function (p) {
           return h("button", {
-            key: p,
-            onClick: function () { setPage(p === "Home" ? 1 : 2); setMobileMenuOpen(false); },
+            key: navLabel(p),
+            onClick: function () { navigateItem(p); },
             className: "w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
-          }, p);
+          }, navLabel(p));
         }),
         h("button", { onClick: function () { setPage(2); setMobileMenuOpen(false); }, className: "w-full bg-[#2E8B57] py-3 rounded-full font-medium" }, t("bookNow", "Book Now")),
         h("a", { href: "admin.html", className: "block text-center text-[11px] text-white/30 pt-1" }, "Admin")

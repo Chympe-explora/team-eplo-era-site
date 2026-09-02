@@ -103,7 +103,7 @@
     "title": "Your Gateway to Meghalaya's Untouched Corners",
     "sub": "From a hidden waterfall and cave system a short trek from Khaddum Village, to a 6-day wilderness expedition into untouched landscapes — we design guided trips into Meghalaya's least-visited corners.",
     "quote": "Symphony in the mist.",
-    "videoUrl": "https://github.com/Chympe-explora/team-eplo-era-site/main/hero-video.mp4",
+    "videoUrl": "hero-video.mp4",
     "videoEnabled": true,
     "fallbackImage": "Trek Trail Mist.jpg",
     "enabled": true,

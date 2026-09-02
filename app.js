@@ -123,7 +123,7 @@
           loop: true,
           playsInline: true,
           className: "absolute inset-0 w-full h-full object-cover",
-          style: { opacity: 1.85 },
+          style: { opacity: 1 },
           onError: function () { console.warn("Hero video failed to load, using fallback image"); }
         },
         h("source", { src: videoUrl, type: "video/mp4" })
@@ -818,7 +818,7 @@
         menuOpen: mobileMenuOpen,
         onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
         onGoTo: goTo,
-        onBookNow: function () { goTo("booking"); },
+        onBookNow: function () { goTo("destinations"); },
         onDiscover: function () { goTo((CONTENT.hero && CONTENT.hero.discoverTargetId) || "destinations"); }
       }),
       page === "home" && showNotice && h(NoticePopup, {

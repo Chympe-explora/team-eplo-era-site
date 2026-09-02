@@ -76,9 +76,19 @@
     );
   }
 
+  // Scrolls so the target section sits just below the sticky header,
+  // computed from the header's real rendered height each time (rather
+  // than relying on the CSS scroll-margin-top trick, which some mobile
+  // webviews such as Telegram's in-app browser don't honor — leaving
+  // the header covering the top of the section after the jump).
   function scrollToId(id) {
     var el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!el) return;
+    var header = document.querySelector("header");
+    var headerHeight = header ? header.getBoundingClientRect().height : 0;
+    var extraGap = 16; // breathing room so the heading isn't flush against the header edge
+    var targetY = el.getBoundingClientRect().top + window.pageYOffset - headerHeight - extraGap;
+    window.scrollTo({ top: Math.max(targetY, 0), behavior: "smooth" });
   }
 
   // ---------------------------------------------------------------------

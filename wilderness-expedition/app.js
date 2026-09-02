@@ -182,14 +182,26 @@
   }
 
   // ---------------------------------------------------------------------
-  // VideoHero — full-width video background with logo + Book Now button.
-  // Shown at the top of page 1 (home). Falls back to a static image if
-  // no video URL is set (or the video fails to load).
+  // VideoHero — full-width video background with logo, call + menu
+  // buttons, an admin-editable quote, Book Now, and a Discover button
+  // that scrolls to the content just below the hero. Shown at the top
+  // of page 1 (home). Falls back to a static image if no video URL is
+  // set, or if the admin has switched the video off, or if it fails to
+  // load.
   // ---------------------------------------------------------------------
   function VideoHero(props) {
     var hero = props.hero || {};
     var videoUrl = hero.videoUrl || "";
+    // A separate on/off switch from "enabled" (which hides the whole
+    // hero) — turning this off just removes the <video> tag, so the
+    // static fallback image shows through exactly as if a video had
+    // never been set at all. Admin-controlled from Telegram.
+    var videoOn = isOn(hero.videoEnabled, true);
     var fallbackImage = hero.fallbackImage || (CONTENT.backgrounds && CONTENT.backgrounds[0]) || "";
+    var logoUrl = props.logo || "logo.png";
+    var phone = (props.phone || "").trim();
+    var telHref = phone ? "tel:" + phone.replace(/[^\d+]/g, "") : "";
+    var navItems = props.navItems || [];
 
     return h(
       "div",
@@ -197,7 +209,12 @@
         className: "relative w-full h-screen bg-cover bg-center overflow-hidden flex flex-col",
         style: { backgroundImage: "url('" + fallbackImage + "')", backgroundAttachment: "fixed", backgroundSize: "cover" }
       },
-      videoUrl && h(
+
+      // Video element (overlaid on background; if it fails — or if the
+      // admin has switched it off — the background image set above
+      // shows through instead, indistinguishable from no video ever
+      // being set)
+      videoOn && videoUrl && h(
         "video",
         {
           autoPlay: true, muted: true, loop: true, playsInline: true,
@@ -207,15 +224,70 @@
         },
         h("source", { src: videoUrl, type: "video/mp4" })
       ),
+
       h("div", { className: "absolute inset-0 bg-black/30 z-[1]" }),
+
+      // Content: top bar (logo left, call + menu right), quote + Book
+      // Now in the middle, Discover pinned to the bottom
       h(
-        "div", { className: "relative z-10 flex flex-col items-center justify-between h-full p-6 md:p-10 md:p-12" },
+        "div", { className: "relative z-10 flex flex-col h-full p-5 md:p-8 lg:p-10" },
+
+        // ---- top bar ----
         h(
-          "div", { className: "flex-shrink-0 pt-4 md:pt-8" },
-          h("div", { className: "font-bold tracking-[0.15em] text-xl md:text-3xl lg:text-4xl text-white drop-shadow-lg" }, CONTENT.siteName || "")
+          "div", { className: "flex-shrink-0 flex items-center justify-between" },
+          h(
+            "div", { className: "flex items-center gap-2.5" },
+            h("img", { src: logoUrl, alt: CONTENT.siteName || "Logo", className: "h-9 md:h-12 object-contain drop-shadow-lg" }),
+            h(
+              "div", { className: "leading-tight" },
+              h("div", { className: "font-bold tracking-[0.12em] text-[13px] md:text-base text-white drop-shadow" }, CONTENT.siteName),
+              h("div", { className: "text-[10px] md:text-xs tracking-[0.18em] text-white/75 -mt-0.5" }, CONTENT.siteSub)
+            )
+          ),
+          h(
+            "div", { className: "flex items-center gap-2.5" },
+            telHref && h(
+              "a",
+              {
+                href: telHref,
+                "aria-label": "Call us",
+                className: "w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/15 border border-white/25 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/25 transition"
+              },
+              h(Phone, { size: 18 })
+            ),
+            h(
+              "button",
+              {
+                onClick: props.onToggleMenu,
+                "aria-label": "Menu",
+                className: "w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/15 border border-white/25 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/25 transition"
+              },
+              props.menuOpen ? h(X, { size: 18 }) : h(Menu, { size: 18 })
+            )
+          )
         ),
+
+        // ---- dropdown menu, opened from the hero's own hamburger ----
+        props.menuOpen && h(
+          GlassCard, { className: "flex-shrink-0 mt-3 p-3 space-y-1" },
+          navItems.map(function (item) {
+            return h("button", {
+              key: item,
+              onClick: function () { props.onNavClick(item); },
+              className: "w-full text-left px-4 py-3 rounded-xl text-white bg-white/5 hover:bg-white/15 transition"
+            }, item);
+          }),
+          h("button", { onClick: props.onBookNow, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] text-white py-3 rounded-full font-medium mt-1 transition" }, "Book Now")
+        ),
+
+        // ---- quote + Book Now ----
         h(
-          "div", { className: "flex-grow flex items-center justify-center px-4" },
+          "div", { className: "flex-grow flex flex-col items-center justify-center gap-6 md:gap-8 px-4 text-center" },
+          hero.quote && h(
+            "p",
+            { className: "italic font-semibold text-white text-[26px] leading-[1.15] md:text-5xl lg:text-6xl max-w-[260px] md:max-w-2xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]" },
+            hero.quote
+          ),
           h(
             "button",
             {
@@ -225,7 +297,77 @@
             "Book Now"
           )
         ),
-        h("div", { className: "flex-shrink-0 h-8" })
+
+        // ---- Discover, bottom of hero — scrolls to the content below ----
+        h(
+          "button",
+          {
+            onClick: props.onDiscover,
+            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-1 text-white/90 hover:text-white transition"
+          },
+          h("span", { className: "text-[13px] md:text-sm tracking-[0.2em] font-medium" }, hero.discoverLabel || "Discover"),
+          h(ChevronDown, { size: 22 })
+        )
+      )
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // NoticePopup — one-time modal for new visitors. Close state is stored
+  // in localStorage (keyed per site) so it only shows once per browser;
+  // admin can broadcast a fresh notice via the "showAgain" flag from
+  // Telegram, which the caller compares against. Fully admin-controlled:
+  // when notice.enabled is off, this renders nothing at all — exactly
+  // as if no notice ever existed.
+  // ---------------------------------------------------------------------
+  function NoticePopup(props) {
+    var onClose = props.onClose;
+    var notice = props.notice || {};
+
+    if (!isOn(notice.enabled, false)) return null;
+
+    return h(
+      "div",
+      {
+        className: "fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/50 backdrop-blur-sm",
+        onClick: onClose
+      },
+      h(
+        "div",
+        {
+          className: "bg-white rounded-3xl shadow-2xl max-w-md w-full relative animate-in fade-in zoom-in-95 duration-300",
+          onClick: function (e) { e.stopPropagation(); }
+        },
+        h(
+          "button",
+          {
+            onClick: onClose,
+            className: "absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 text-2xl transition-colors",
+            "aria-label": "Close"
+          },
+          "\u2715"
+        ),
+        h(
+          "div", { className: "p-6 md:p-8 text-center" },
+          h("img", {
+            src: props.logo || "logo.png",
+            alt: "Logo",
+            className: "h-12 md:h-14 object-contain mx-auto mb-5",
+            onError: function (e) { e.target.style.display = "none"; }
+          }),
+          h("h2", { className: "text-lg md:text-2xl font-bold text-gray-900 mb-2" }, notice.title || "PUBLIC NOTICE"),
+          notice.subtitle && h("p", { className: "text-sm md:text-base text-gray-600 font-semibold mb-4" }, notice.subtitle),
+          h("div", { className: "text-gray-700 text-sm md:text-base leading-relaxed mb-6 whitespace-pre-wrap font-normal" }, notice.text || ""),
+          h(
+            "button",
+            {
+              onClick: onClose,
+              style: { backgroundColor: notice.iconBg || "#2E8B57", color: "#fff" },
+              className: "w-full font-bold py-3 md:py-4 rounded-full hover:opacity-90 transition-opacity duration-200 text-sm md:text-base"
+            },
+            notice.buttonText || "Got it"
+          )
+        )
       )
     );
   }
@@ -420,6 +562,25 @@
     var pageState = useState(1); var page = pageState[0], setPage = pageState[1];
     var pkgState = useState(null); var pkg = pkgState[0], setPkg = pkgState[1];
     var menuState = useState(false); var mobileMenuOpen = menuState[0], setMobileMenuOpen = menuState[1];
+
+    // ---- Notice popup: shows once per visitor, closable, admin-resettable ----
+    var NOTICE = CONTENT.notice || {};
+    var noticeState = useState(function () {
+      if (typeof localStorage === "undefined") return true;
+      var closedVersion = localStorage.getItem("era_notice_closed_" + (window.KC_SITE_ID || "site"));
+      // If the admin bumps notice.showAgain, a stale closedVersion no
+      // longer matches, so the notice shows again for everyone.
+      return closedVersion !== String(NOTICE.showAgain || "");
+    });
+    var showNotice = noticeState[0], setShowNotice = noticeState[1];
+
+    function closeNotice() {
+      setShowNotice(false);
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("era_notice_closed_" + (window.KC_SITE_ID || "site"), String(NOTICE.showAgain || ""));
+      }
+    }
+
     var galleryState = useState("All"); var galleryFilter = galleryState[0], setGalleryFilter = galleryState[1];
     var GALLERY_PAGE = CONTENT.galleryPage || { subtitle: "", filters: ["All"], viewAllLabel: "" };
     var lightboxState = useState(null); var lightboxImage = lightboxState[0], setLightboxImage = lightboxState[1];
@@ -473,10 +634,33 @@
     useEffect(function () {
       if (!window.KCBridge) return;
       window.KCBridge.sendDraft({
+        destination: CONTENT.siteName,
+        package: packageLabelForDraft(),
         name: contact.name, whatsapp: contact.whatsapp, date: contact.date,
-        specialRequest: contact.specialRequest, package: packageLabelForDraft(),
+        specialRequest: contact.specialRequest,
       });
     }, [contact.name, contact.whatsapp, contact.date, contact.specialRequest, pkg]);
+
+    // Separate, IMMEDIATE (non-debounced) ping the moment the visitor
+    // moves between booking steps — tapping Next or Back — so the admin
+    // sees a fresh line in Telegram right at that moment, not just while
+    // someone is actively typing. Always includes the destination and
+    // package name for context, plus whatever's been filled in so far.
+    var lastAnnouncedStepRef = useRef(null);
+    useEffect(function () {
+      if (!window.KCBridge) return;
+      if (page < 2 || page > 5) return; // only the booking-flow steps
+      if (lastAnnouncedStepRef.current === page) return;
+      lastAnnouncedStepRef.current = page;
+      var stepNames = { 2: "Choosing package", 3: "Filling booking form", 4: "Reviewing price", 5: "Payment" };
+      window.KCBridge.sendDraft({
+        step: stepNames[page] || ("Page " + page),
+        destination: CONTENT.siteName,
+        package: packageLabelForDraft(),
+        name: contact.name, whatsapp: contact.whatsapp, date: contact.date,
+        specialRequest: contact.specialRequest,
+      }, true);
+    }, [page]);
 
     function packageLabelForDraft() {
       return pkg === "sharedTour" ? (CONTENT.packages.sharedTour && CONTENT.packages.sharedTour.name) || "Shared Package"
@@ -811,6 +995,10 @@
       return "https://wa.me/" + CONTENT.whatsappNumber + "?text=" + encodeURIComponent(buildBookingMessageText());
     }
 
+    // ---- Nav items shared by the header and the hero's own dropdown ----
+    var navItems = (CONTENT.nav && CONTENT.nav.items) || ["Home", "Explore", "Packages", "Gallery", "Booking", "Contact"];
+    function onHeroNavClick(item) { setMobileMenuOpen(false); setPage(item === "Home" ? 1 : 2); }
+
     // ---- Header ----------------------------------------------------
     var header = h(
       "header", { className: "sticky top-0 z-40 p-3 md:p-4" },
@@ -860,7 +1048,7 @@
     // ---- Page 1: Home ------------------------------------------------
     var titleWords = CONTENT.hero.title.split(" ");
     var page1 = page === 1 && h(
-      "main", { className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6" },
+      "main", { id: "kc-content-start", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24" },
       h(
         "div", { className: "grid md:grid-cols-[1.15fr_0.85fr] gap-6" },
         h(
@@ -1701,7 +1889,21 @@
       page === 1 && isOn(CONTENT.hero && CONTENT.hero.enabled, true) && h(VideoHero, {
         hero: CONTENT.hero,
         logo: CONTENT.logoImage,
-        onBookNow: function () { setPage(2); }
+        phone: FOOTER.phone,
+        navItems: navItems,
+        menuOpen: mobileMenuOpen,
+        onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
+        onNavClick: onHeroNavClick,
+        onBookNow: function () { setPage(2); },
+        onDiscover: function () {
+          var el = document.getElementById("kc-content-start");
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }),
+      page === 1 && showNotice && h(NoticePopup, {
+        notice: CONTENT.notice,
+        logo: CONTENT.logoImage,
+        onClose: closeNotice
       }),
       header, page1, page2, page3, page4, page5, page6, page7, bottomNav, lightbox,
       h("style", null, "\n        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap');\n        *{font-family:Inter, Poppins, sans-serif}\n        ::-webkit-scrollbar{width:6px;height:6px}\n        ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:99px}\n      ")

@@ -20,6 +20,21 @@
     if (v === true || v === "true") return true;
     return defaultOn;
   }
+
+  // Scrolls so the target section sits just below the sticky header,
+  // computed from the header's real rendered height each time (rather
+  // than relying on the CSS scroll-margin-top trick, which some mobile
+  // webviews such as Telegram's in-app browser don't honor — leaving
+  // the header covering the top of the section after the jump).
+  function scrollToId(id) {
+    var el = document.getElementById(id);
+    if (!el) { window.scrollTo(0, 0); return; }
+    var header = document.querySelector("header");
+    var headerHeight = header ? header.getBoundingClientRect().height : 0;
+    var extraGap = 16; // breathing room so the heading isn't flush against the header edge
+    var targetY = el.getBoundingClientRect().top + window.pageYOffset - headerHeight - extraGap;
+    window.scrollTo({ top: Math.max(targetY, 0), behavior: "smooth" });
+  }
   var PRICES = window.KC_PRICES;
   var ui = CONTENT.ui || {};
   var t = function (key, fallback) { return (ui && ui[key]) || fallback; };
@@ -1045,8 +1060,7 @@
       var dest = resolveNavTarget(item);
       function scroll() {
         if (!dest.scrollId) { window.scrollTo(0, 0); return; }
-        var el = document.getElementById(dest.scrollId);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); else window.scrollTo(0, 0);
+        scrollToId(dest.scrollId);
       }
       if (page !== dest.page) { setPage(dest.page); setTimeout(scroll, 60); }
       else scroll();
@@ -1950,10 +1964,7 @@
         onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
         onNavClick: onHeroNavClick,
         onBookNow: function () { setPage(2); },
-        onDiscover: function () {
-          var el = document.getElementById("kc-content-start");
-          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        onDiscover: function () { scrollToId("kc-content-start"); }
       }),
       page === 1 && showNotice && h(NoticePopup, {
         notice: CONTENT.notice,

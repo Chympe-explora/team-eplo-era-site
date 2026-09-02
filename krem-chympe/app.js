@@ -1009,13 +1009,32 @@
     // lets the admin point "Gallery" or "Contact" somewhere other than
     // Packages without touching this file again.
     function navLabel(item) { return typeof item === "string" ? item : (item && item.label) || ""; }
-    function navTarget(item) {
-      if (typeof item === "string") return item === "Home" ? 1 : 2;
-      var t = item && Number(item.target);
-      return t && !isNaN(t) ? t : 2;
+    // Maps a nav item's target to a { page, scrollId } destination.
+    // "target" can be a section keyword ("home" | "explore" | "gallery" |
+    // "contact" | "packages" | "booking") which scrolls to that exact
+    // section - jumping to the right wizard page first if it isn't the
+    // current one - editable from the Telegram bot without touching this
+    // file. Legacy values (a plain string label, or a numeric 1/2 target
+    // from older content) still work, falling back to the old "jump to
+    // page 2" behavior.
+    var NAV_DESTINATIONS = {
+      home: { page: 1, scrollId: null },
+      explore: { page: 1, scrollId: "kc-explore" },
+      gallery: { page: 1, scrollId: "kc-gallery" },
+      contact: { page: 1, scrollId: "kc-contact" },
+      packages: { page: 2, scrollId: "kc-packages" },
+      booking: { page: 2, scrollId: "kc-packages" }
+    };
+    function resolveNavTarget(item) {
+      var raw = typeof item === "string" ? null : (item && item.target);
+      if (typeof raw === "string" && NAV_DESTINATIONS[raw.toLowerCase()]) return NAV_DESTINATIONS[raw.toLowerCase()];
+      if (typeof item === "string") return item === "Home" ? NAV_DESTINATIONS.home : NAV_DESTINATIONS.packages;
+      var n = item && Number(item.target);
+      if (n === 1) return NAV_DESTINATIONS.home;
+      return NAV_DESTINATIONS.packages;
     }
     // Handles the two extra destination kinds the admin bot can set on a
-    // nav item beyond a plain page jump: an external "url", or
+    // nav item beyond a section jump: an external "url", or
     // "whatsapp": true to open a WhatsApp chat.
     function navigateItem(item) {
       if (item && typeof item === "object") {
@@ -1023,7 +1042,14 @@
         if (item.whatsapp) { setMobileMenuOpen(false); window.open("https://wa.me/" + (CONTENT.whatsappNumber || ""), "_blank"); return; }
       }
       setMobileMenuOpen(false);
-      setPage(navTarget(item));
+      var dest = resolveNavTarget(item);
+      function scroll() {
+        if (!dest.scrollId) { window.scrollTo(0, 0); return; }
+        var el = document.getElementById(dest.scrollId);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); else window.scrollTo(0, 0);
+      }
+      if (page !== dest.page) { setPage(dest.page); setTimeout(scroll, 60); }
+      else scroll();
     }
     var navItems = (CONTENT.nav && CONTENT.nav.items) || ["Home", "Explore", "Packages", "Gallery", "Booking", "Contact"];
     function onHeroNavClick(item) { navigateItem(item); }
@@ -1175,7 +1201,7 @@
         )
       ),
       SECTIONS.destinationDetails && h(
-        "div", { className: "space-y-6" },
+        "div", { id: "kc-explore", className: "space-y-6 scroll-mt-24" },
         h(
           GlassCard, { className: "p-8 md:p-10 text-center" },
           h("h2", { className: "text-3xl font-semibold" }, CONTENT.destinationDetails.title),
@@ -1276,7 +1302,7 @@
         )
       ),
       SECTIONS.gallery && h(
-        GlassCard, { className: "p-6 md:p-8" },
+        GlassCard, { id: "kc-gallery", className: "p-6 md:p-8 scroll-mt-24" },
         h(
           "div", { className: "flex flex-wrap justify-between items-center gap-4" },
           h("h3", { className: "text-2xl font-semibold" }, t("ourGallery", "Our Gallery"), h("br"), h("span", { className: "text-white/50 text-base font-normal" }, GALLERY_PAGE.subtitle)),
@@ -1299,7 +1325,7 @@
         h("div", { className: "mt-6 flex justify-center" }, h("a", { href: CONTENT.instagram, target: "_blank", className: "px-6 py-2.5 rounded-full bg-white/10 border border-white/10 hover:bg-white/15 text-sm flex items-center gap-2" }, h(Camera, { size: 16 }), GALLERY_PAGE.viewAllLabel))
       ),
       h(
-        "footer", { className: "pt-6" },
+        "footer", { id: "kc-contact", className: "pt-6 scroll-mt-24" },
         h(
           GlassCard, { className: "p-8 md:p-10" },
           h("h3", { className: "text-center tracking-[0.15em] text-lg font-semibold" }, FOOTER.brandName),
@@ -1388,7 +1414,7 @@
 
     // ---- Page 2: Packages & Gallery ------------------------------------
     var page2 = page === 2 && h(
-      "main", { className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6" },
+      "main", { id: "kc-packages", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24" },
       h(
         GlassCard, { className: "p-8 md:p-10 text-center" },
         h("h2", { className: "text-3xl md:text-4xl font-bold" }, t("ourAdventurePackages", "Our Adventure Packages")),

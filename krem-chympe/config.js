@@ -233,8 +233,19 @@
 
       // ---- Navigation menu labels (top bar + mobile menu) ----
       nav: {
-        items: ["Home", "Explore", "Packages", "Gallery", "Booking", "Contact"],
-        mobileItems: ["Home", "Packages", "Gallery"]
+        items: [
+          { label: "Home", target: "home" },
+          { label: "Explore", target: "explore" },
+          { label: "Packages", target: "packages" },
+          { label: "Gallery", target: "gallery" },
+          { label: "Booking", target: "booking" },
+          { label: "Contact", target: "contact" }
+        ],
+        mobileItems: [
+          { label: "Home", target: "home" },
+          { label: "Packages", target: "packages" },
+          { label: "Gallery", target: "gallery" }
+        ]
       },
 
       // ---- "Trusted by..." strip under the hero ----

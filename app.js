@@ -178,8 +178,8 @@
           GlassCard, { className: "flex-shrink-0 mt-3 p-3 space-y-1" },
           navItems.map(function (item) {
             return h("button", {
-              key: item.id,
-              onClick: function () { props.onGoTo(item.id); },
+              key: item.id || item.label,
+              onClick: function () { props.onGoTo(item); },
               className: "w-full text-left px-4 py-3 rounded-xl text-white bg-white/5 hover:bg-white/15 transition"
             }, item.label);
           }),
@@ -509,6 +509,26 @@
       }
     }
 
+    // Generalized nav-item destination resolver. By default a nav item
+    // just scrolls to a section (item.id, the original behavior). The
+    // admin bot can also give an item a "url" (opens an external link
+    // — e.g. an Instagram page) or set "whatsapp": true (opens a WhatsApp
+    // chat) instead, without any code changes on this end.
+    function navigateTo(item) {
+      if (!item) return;
+      if (item.url) {
+        setMobileMenuOpen(false);
+        window.open(item.url, item.newTab === false ? "_self" : "_blank");
+        return;
+      }
+      if (item.whatsapp) {
+        setMobileMenuOpen(false);
+        window.open("https://wa.me/" + (CONTENT.whatsappNumber || ""), "_blank");
+        return;
+      }
+      goTo(item.id || "home");
+    }
+
     // ---- Header ----------------------------------------------------
     var header = h(
       "header", { className: "sticky top-0 z-40 p-3 md:p-4" },
@@ -529,8 +549,8 @@
           "nav", { className: "hidden md:flex items-center gap-1 bg-white/[0.06] border border-white/10 rounded-full p-1.5 backdrop-blur-xl" },
           navItems.map(function (item) {
             return h("button", {
-              key: item.id,
-              onClick: function () { goTo(item.id); },
+              key: item.id || item.label,
+              onClick: function () { navigateTo(item); },
               className: "px-4 py-1.5 rounded-full text-[13px] transition text-white/80 hover:text-white hover:bg-white/10"
             }, item.label);
           })
@@ -545,8 +565,8 @@
         GlassCard, { className: "md:hidden mt-3 p-4 max-w-[1280px] mx-auto space-y-2" },
         navItems.map(function (item) {
           return h("button", {
-            key: item.id,
-            onClick: function () { goTo(item.id); },
+            key: item.id || item.label,
+            onClick: function () { navigateTo(item); },
             className: "w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
           }, item.label);
         }),
@@ -817,8 +837,8 @@
         navItems: navItems,
         menuOpen: mobileMenuOpen,
         onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
-        onGoTo: goTo,
-        onBookNow: function () { goTo("destinations"); },
+        onGoTo: navigateTo,
+        onBookNow: function () { goTo((CONTENT.hero && CONTENT.hero.bookNowTargetId) || "destinations"); },
         onDiscover: function () { goTo((CONTENT.hero && CONTENT.hero.discoverTargetId) || "destinations"); }
       }),
       page === "home" && showNotice && h(NoticePopup, {

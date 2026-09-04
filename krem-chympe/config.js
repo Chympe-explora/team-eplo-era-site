@@ -711,7 +711,8 @@
         enabled: true,
         discoverLabel: "Discover",
         bookNowLabel: "Explore",
-        bookNowTargetPage: 2
+        bookNowTargetPage: 2,
+        bookNowLink: ""
       },
 
       // Persistent header/mobile-menu CTA button (the one that stays

@@ -382,11 +382,15 @@
         ),
 
         // ---- Discover, bottom of hero — scrolls to the content below ----
+        // Nudged up from the very bottom edge (pb-6 instead of pb-1,
+        // plus a safe-area inset) so mobile browser chrome — Chrome's
+        // address bar, iOS's home-indicator bar, etc. — never covers it.
         h(
           "button",
           {
             onClick: props.onDiscover,
-            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-1 text-white/90 hover:text-white transition"
+            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-6 md:pb-3 text-white/90 hover:text-white transition",
+            style: { marginBottom: "env(safe-area-inset-bottom, 0px)" }
           },
           h("span", { className: "text-[13px] md:text-sm tracking-[0.2em] font-medium" }, hero.discoverLabel || "Discover"),
           h(ChevronDown, { size: 22 })
@@ -648,6 +652,16 @@
     // page by default (2 = package selection) — admin-editable via
     // CONTENT.headerCta.targetPage, never hard-coded.
     var HEADER_CTA_TARGET_PAGE = (CONTENT.headerCta && CONTENT.headerCta.targetPage) || 2;
+
+    // Every "Book Now" button anywhere in the header/CTAs routes through
+    // here — if hero.bookNowLink is set from Telegram admin, it opens
+    // that link instead of jumping into the booking flow; otherwise it
+    // behaves exactly as it always has.
+    function goBookNow() {
+      var link = CONTENT.hero && CONTENT.hero.bookNowLink;
+      if (link) { window.open(link, "_blank"); return; }
+      setPage(HEADER_CTA_TARGET_PAGE);
+    }
 
     // Tell the site-wide fixed background layer (mounted outside React,
     // see background-system.js) which page is now active, so it can
@@ -1199,7 +1213,7 @@
         ),
         h(
           "div", { className: "flex items-center gap-2" },
-          h("button", { onClick: function () { setPage(HEADER_CTA_TARGET_PAGE); }, className: "hidden md:block bg-[#2E8B57] hover:bg-[#257a4b] px-5 py-2 rounded-full text-sm font-medium transition" }, t("bookNow", "Book Now")),
+          h("button", { onClick: function () { goBookNow(); }, className: "hidden md:block bg-[#2E8B57] hover:bg-[#257a4b] px-5 py-2 rounded-full text-sm font-medium transition" }, t("bookNow", "Book Now")),
           h("button", { onClick: function () { setMobileMenuOpen(!mobileMenuOpen); }, className: "md:hidden w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center" }, mobileMenuOpen ? h(X, { size: 18 }) : h(Menu, { size: 18 }))
         )
       ),
@@ -1212,7 +1226,7 @@
             className: "w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
           }, navLabel(p));
         }),
-        h("button", { onClick: function () { setPage(HEADER_CTA_TARGET_PAGE); setMobileMenuOpen(false); }, className: "w-full bg-[#2E8B57] py-3 rounded-full font-medium" }, t("bookNow", "Book Now")),
+        h("button", { onClick: function () { goBookNow(); setMobileMenuOpen(false); }, className: "w-full bg-[#2E8B57] py-3 rounded-full font-medium" }, t("bookNow", "Book Now")),
         h("a", { href: "admin.html", className: "block text-center text-[11px] text-white/30 pt-1" }, "Admin")
       )
     );
@@ -1232,7 +1246,7 @@
             titleWords.slice(0, 2).join(" "), h("br"), h("span", { className: "text-white/70" }, titleWords.slice(2).join(" "))
           ),
           h("p", { className: "mt-5 text-white/70 text-[15px] leading-relaxed max-w-[520px]" }, CONTENT.hero.sub),
-          h("div", { className: "mt-8 flex gap-3" }, h("button", { onClick: function () { setPage(HEADER_CTA_TARGET_PAGE); }, className: "bg-[#2E8B57] hover:bg-[#257a4b] px-7 py-3 rounded-full text-sm font-semibold flex items-center gap-2" }, "Book Now ", h(ArrowRight, { size: 16 })))
+          h("div", { className: "mt-8 flex gap-3" }, h("button", { onClick: function () { goBookNow(); }, className: "bg-[#2E8B57] hover:bg-[#257a4b] px-7 py-3 rounded-full text-sm font-semibold flex items-center gap-2" }, "Book Now ", h(ArrowRight, { size: 16 })))
         ),
         h(
           GlassCard, { className: "p-5 md:p-6 flex flex-col justify-between" },
@@ -1245,7 +1259,7 @@
             h("div", { className: "flex items-center justify-between" }, h("span", { className: "text-sm text-white/70 flex items-center gap-2" }, h(IndianRupee, { size: 16 }), t("price", " Price")), h("span", { className: "text-sm font-medium" }, CONTENT.hero.priceLabel)),
             h("div", { className: "mt-6 rounded-[16px] overflow-hidden border border-white/10" }, h("img", { src: CONTENT.sectionImages.heroCave, className: "w-full h-[180px] object-cover" }))
           ),
-          h("button", { onClick: function () { setPage(HEADER_CTA_TARGET_PAGE); }, className: "mt-6 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full text-sm font-semibold" }, t("bookNow", "Book Now"))
+          h("button", { onClick: function () { goBookNow(); }, className: "mt-6 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full text-sm font-semibold" }, t("bookNow", "Book Now"))
         )
       ),
       SECTIONS.trustBar && h(
@@ -2102,7 +2116,11 @@
         menuOpen: mobileMenuOpen,
         onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
         onNavClick: onHeroNavClick,
-        onBookNow: function () { setPage((CONTENT.hero && CONTENT.hero.bookNowTargetPage) || 2); },
+        onBookNow: function () {
+          var link = CONTENT.hero && CONTENT.hero.bookNowLink;
+          if (link) { window.open(link, "_blank"); return; }
+          setPage((CONTENT.hero && CONTENT.hero.bookNowTargetPage) || 2);
+        },
         onDiscover: function () { scrollToId("kc-content-start"); }
       }),
       page === 1 && showNotice && h(NoticePopup, {

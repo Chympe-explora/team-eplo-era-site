@@ -180,6 +180,49 @@
       siteName: "KREM CHYMPE",
       siteSub: "ADVENTURE & CAMPING",
 
+      // ---- 🎬 Site-wide background video ----
+      // One cinematic video pinned behind the whole site while visitors
+      // scroll. "global" is the default for every page (1-7 below); add
+      // a page number under "pages" only if that page needs its own
+      // video — leave it "enabled": false to just inherit the global
+      // one. Controlled from Telegram Admin → Background Manager.
+      background: {
+        global: {
+          enabled: true,
+          videoUrl: "hero-video.mp4",
+          videoEnabled: true,
+          videoOpacity: 100,
+          fallbackImage: window.KC_IMAGES.heroBg1,
+          overlay: { enabled: true, color: "#000000", opacity: 40, gradient: false }
+        },
+        pages: {
+          "1": { enabled: false }, // Home
+          "2": { enabled: false }, // Package selection
+          "3": { enabled: false }, // Booking form
+          "4": { enabled: false }, // Pricing / itemized invoice
+          "5": { enabled: false }, // Payment options
+          "6": { enabled: false }, // Booking confirmation
+          "7": { enabled: false }  // Refund policy
+        }
+      },
+
+      // ---- 🧱 Per-page background / opacity / glass ----
+      // Each page (1-7, same numbering as above) defaults to
+      // "transparent" so the global background video shows through.
+      // Give a page its own color/gradient/image/video here to
+      // override just that page — this never changes the opacity of
+      // its text, buttons, or cards, only this separate layer behind
+      // them.
+      sectionStyles: {
+        "1": { background: { type: "transparent", opacity: 100 }, overlay: { enabled: false, color: "#000000", opacity: 30, gradient: false }, glass: { enabled: false, opacity: 20, blur: 12, borderOpacity: 20, borderRadius: 24 } },
+        "2": { background: { type: "transparent", opacity: 100 }, overlay: { enabled: false, color: "#000000", opacity: 30, gradient: false }, glass: { enabled: false, opacity: 20, blur: 12, borderOpacity: 20, borderRadius: 24 } },
+        "3": { background: { type: "transparent", opacity: 100 }, overlay: { enabled: false, color: "#000000", opacity: 30, gradient: false }, glass: { enabled: false, opacity: 20, blur: 12, borderOpacity: 20, borderRadius: 24 } },
+        "4": { background: { type: "transparent", opacity: 100 }, overlay: { enabled: false, color: "#000000", opacity: 30, gradient: false }, glass: { enabled: false, opacity: 20, blur: 12, borderOpacity: 20, borderRadius: 24 } },
+        "5": { background: { type: "transparent", opacity: 100 }, overlay: { enabled: false, color: "#000000", opacity: 30, gradient: false }, glass: { enabled: false, opacity: 20, blur: 12, borderOpacity: 20, borderRadius: 24 } },
+        "6": { background: { type: "transparent", opacity: 100 }, overlay: { enabled: false, color: "#000000", opacity: 30, gradient: false }, glass: { enabled: false, opacity: 20, blur: 12, borderOpacity: 20, borderRadius: 24 } },
+        "7": { background: { type: "transparent", opacity: 100 }, overlay: { enabled: false, color: "#000000", opacity: 30, gradient: false }, glass: { enabled: false, opacity: 20, blur: 12, borderOpacity: 20, borderRadius: 24 } }
+      },
+
       // ---- Contact & payment details ----
       instagram: "https://www.instagram.com/unexplored_meghalaya?igsh=ZHZpODB3aXl0bXBu",
       whatsappNumber: "916001877518",
@@ -666,7 +709,18 @@
         videoEnabled: true, // Telegram admin bot → ✏️ Edit Website Text → Hero → Video Enabled (tap to switch on/off)
         fallbackImage: window.KC_IMAGES.heroBg1,
         enabled: true,
-        discoverLabel: "Discover"
+        discoverLabel: "Discover",
+        bookNowLabel: "Explore",
+        bookNowTargetPage: 2
+      },
+
+      // Persistent header/mobile-menu CTA button (the one that stays
+      // visible while scrolling, separate from the hero's own
+      // "Explore" button above). Label already editable from Telegram
+      // admin bot → ✏️ Edit Website Text → UI Labels → bookNow; the
+      // page it jumps to is set here.
+      headerCta: {
+        targetPage: 2
       },
 
       // Public notice popup — fully controlled from the Telegram admin bot

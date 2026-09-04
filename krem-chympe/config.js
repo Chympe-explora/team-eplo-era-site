@@ -179,7 +179,6 @@
       // ---- Site identity ----
       siteName: "KREM CHYMPE",
       siteSub: "ADVENTURE & CAMPING",
-      typography: { headingColor: "#ffffff", bodyColor: "#ffffff" },
 
       // ---- 🎬 Site-wide background video ----
       // One cinematic video pinned behind the whole site while visitors

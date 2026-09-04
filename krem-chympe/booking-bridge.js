@@ -138,7 +138,49 @@ window.KCBridge = (function () {
     return () => { stopped = true; clearTimeout(timer); document.removeEventListener("visibilitychange", onVisible); };
   }
 
-  return { trackVisit, trackTap, sendDraft, notifyPayNow, uploadReceipt, submitBooking, watchStatus, sessionId };
+  // Call to request a refund on an already-confirmed booking. Returns
+  // { ok, bookingId, refundStatus }.
+  function requestRefund(bookingId, reason) {
+    return fetch(`${API_BASE}/api/refund-request`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId, siteId: SITE_ID, bookingId, reason }),
+    }).then(r => r.json()).catch(() => ({ ok: false, error: "network error" }));
+  }
+
+  // Poll refund status the same way watchStatus() polls booking status.
+  // onUpdate("requested" | "approved" | "denied") called whenever it
+  // changes. Returns a stop() function.
+  function watchRefundStatus(bookingId, onUpdate) {
+    let stopped = false;
+    let last = null;
+    let timer = null;
+    async function poll() {
+      if (stopped) return;
+      try {
+        const r = await fetch(`${API_BASE}/api/refund-status/${bookingId}`);
+        const { refundStatus } = await r.json();
+        if (refundStatus && refundStatus !== last) {
+          last = refundStatus;
+          onUpdate(refundStatus);
+        }
+      } catch (e) {}
+      if (!stopped && last !== "approved" && last !== "denied") {
+        timer = setTimeout(poll, document.hidden ? 5000 : 1000);
+      }
+    }
+    function onVisible() {
+      if (!document.hidden && !stopped && last !== "approved" && last !== "denied") {
+        clearTimeout(timer);
+        poll();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    poll();
+    return () => { stopped = true; clearTimeout(timer); document.removeEventListener("visibilitychange", onVisible); };
+  }
+
+  return { trackVisit, trackTap, sendDraft, notifyPayNow, uploadReceipt, submitBooking, watchStatus, requestRefund, watchRefundStatus, sessionId };
 })();
 
 // Fire the silent visit ping as soon as this script loads, and again on

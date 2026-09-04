@@ -749,7 +749,7 @@
               "div", { className: "p-6 flex flex-col flex-1" },
               h("h3", { className: "text-lg font-semibold" }, d.name),
               h("p", { className: "mt-3 text-white/70 text-sm leading-relaxed flex-1" }, d.description),
-              h("button", { onClick: function () { if (d.link) { window.location.href = d.link; } else { goTo("booking"); } }, className: "mt-6 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full text-sm font-semibold" }, d.buttonLabel || "Book Now")
+              h("button", { onClick: function () { if (d.link) { window.location.href = d.link; } else { goTo("booking"); } }, className: "mt-6 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full text-sm font-semibold" }, d.buttonLabel || "Explore Now")
             )
           );
         })

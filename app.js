@@ -283,11 +283,15 @@
         ),
 
         // ---- Discover, bottom of hero — scrolls to destinations ----
+        // Nudged up from the very bottom edge (pb-6 instead of pb-1,
+        // plus a safe-area inset) so mobile browser chrome — Chrome's
+        // address bar, iOS's home-indicator bar, etc. — never covers it.
         h(
           "button",
           {
             onClick: props.onDiscover,
-            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-1 text-white/90 hover:text-white transition"
+            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-6 md:pb-3 text-white/90 hover:text-white transition",
+            style: { marginBottom: "env(safe-area-inset-bottom, 0px)" }
           },
           h("span", { className: "text-[13px] md:text-sm tracking-[0.2em] font-medium" }, hero.discoverLabel || "Discover"),
           h(ChevronDown, { size: 22 })
@@ -384,6 +388,10 @@
     var submittingState = useState(false); var submitting = submittingState[0], setSubmitting = submittingState[1];
     var doneState = useState(false); var justSubmitted = doneState[0], setJustSubmitted = doneState[1];
     var errorState = useState(""); var error = errorState[0], setError = errorState[1];
+    // Comments collapsed by default — the full grid of visitor comments
+    // was taking up a lot of vertical space on the page; now it only
+    // expands when someone actually wants to read them.
+    var commentsOpenState = useState(false); var commentsOpen = commentsOpenState[0], setCommentsOpen = commentsOpenState[1];
 
     function loadRatings() {
       fetch(API_BASE + "/api/ratings?site=" + encodeURIComponent(siteId))
@@ -435,12 +443,12 @@
       ),
 
       h(
-        GlassCard, { className: "p-6 md:p-10 grid md:grid-cols-[auto_1fr] gap-8 items-center" },
+        GlassCard, { className: "p-4 md:p-6 grid md:grid-cols-[auto_1fr] gap-6 items-center" },
         h(
-          "div", { className: "text-center md:border-r md:border-white/10 md:pr-10" },
-          h("div", { className: "text-5xl font-bold" }, average || "\u2013"),
-          h(Stars, { value: average, size: 20 }),
-          h("div", { className: "text-white/60 text-xs mt-1.5" }, count + (count === 1 ? " rating" : " ratings"))
+          "div", { className: "text-center md:border-r md:border-white/10 md:pr-8" },
+          h("div", { className: "text-3xl font-bold" }, average || "\u2013"),
+          h(Stars, { value: average, size: 14 }),
+          h("div", { className: "text-white/60 text-xs mt-1" }, count + (count === 1 ? " rating" : " ratings"))
         ),
         h(
           "div", { className: "space-y-2 w-full" },
@@ -507,18 +515,30 @@
       ),
 
       reviews.length > 0 && h(
-        "div", { className: "grid md:grid-cols-2 gap-4" },
-        reviews.slice(0, 6).map(function (r) {
-          return h(
-            GlassCard, { key: r.id, className: "p-5" },
-            h(
-              "div", { className: "flex items-center justify-between mb-2" },
-              h("span", { className: "font-semibold text-sm" }, r.name),
-              h(Stars, { value: r.rating, size: 14 })
-            ),
-            r.comment && h("p", { className: "text-white/70 text-sm leading-relaxed" }, r.comment)
-          );
-        })
+        "div", { className: "space-y-3" },
+        h(
+          "button",
+          {
+            onClick: function () { setCommentsOpen(!commentsOpen); },
+            className: "w-full flex items-center justify-between px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm font-medium"
+          },
+          h("span", null, "\ud83d\udcac Visitor Comments (" + reviews.length + ")"),
+          h("span", { className: "text-white/50 text-xs" }, commentsOpen ? "Hide \u25b2" : "Show \u25bc")
+        ),
+        commentsOpen && h(
+          "div", { className: "grid md:grid-cols-2 gap-4" },
+          reviews.slice(0, 6).map(function (r) {
+            return h(
+              GlassCard, { key: r.id, className: "p-5" },
+              h(
+                "div", { className: "flex items-center justify-between mb-2" },
+                h("span", { className: "font-semibold text-sm" }, r.name),
+                h(Stars, { value: r.rating, size: 14 })
+              ),
+              r.comment && h("p", { className: "text-white/70 text-sm leading-relaxed" }, r.comment)
+            );
+          })
+        )
       )
     );
   }
@@ -967,7 +987,11 @@
         menuOpen: mobileMenuOpen,
         onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
         onGoTo: navigateTo,
-        onBookNow: function () { goTo((CONTENT.hero && CONTENT.hero.bookNowTargetId) || "destinations"); },
+        onBookNow: function () {
+          var link = CONTENT.hero && CONTENT.hero.bookNowLink;
+          if (link) { window.open(link, "_blank"); return; }
+          goTo((CONTENT.hero && CONTENT.hero.bookNowTargetId) || "destinations");
+        },
         onDiscover: function () { goTo((CONTENT.hero && CONTENT.hero.discoverTargetId) || "destinations"); }
       }),
       page === "home" && showNotice && h(NoticePopup, {

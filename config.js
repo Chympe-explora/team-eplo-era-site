@@ -184,7 +184,8 @@
     "discoverLabel": "Discover",
     "discoverTargetId": "destinations",
     "bookNowLabel": "Explore",
-    "bookNowTargetId": "destinations"
+    "bookNowTargetId": "destinations",
+    "bookNowLink": ""
   },
   "headerCta": {
     "label": "Book Now",

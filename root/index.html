@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Krem Chympe — Adventure &amp; Camping</title>
+
+  <!--
+    ⚠️  ALL PRICES, PHOTOS, AND TEXT LIVE IN config.js NOW — not in this
+    file. Open config.js to change anything. This file (index.html) is
+    the site's engine room; you shouldn't need to touch it.
+
+    The tiny script below just watches for typos in config.js (like a
+    missing comma) and shows a clear red warning banner on the site
+    instead of the page silently going blank.
+  -->
+  <script>
+    function showConfigError(msg) {
+      if (document.getElementById("kc-config-error")) return; // already showing one
+      var el = document.createElement("div");
+      el.id = "kc-config-error";
+      el.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;" +
+        "color:#fff;padding:14px 18px;font:600 13.5px/1.5 system-ui,-apple-system,sans-serif;" +
+        "text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);";
+      el.textContent = "⚠️ " + msg;
+      function attach() { document.body.insertBefore(el, document.body.firstChild); }
+      if (document.body) attach(); else document.addEventListener("DOMContentLoaded", attach);
+    }
+    window.addEventListener("error", function (e) {
+      if (e && e.filename && e.filename.indexOf("config.js") !== -1) {
+        showConfigError(
+          "There's a mistake in config.js (most likely a missing comma or quote mark near " +
+          "line " + e.lineno + "). Prices/content may be wrong until this is fixed: " + e.message
+        );
+      }
+    });
+  </script>
+  <script src="config.js"></script>
+  <script>window.KC_SITE_ID = "root";</script>
+  <!-- Pulls in anything changed from the Telegram admin bot (text,
+       photos, prices, discounts, highlights) and merges it over the
+       config.js defaults above, before the page renders. See
+       live-content.js — safe to remove and the site still works from
+       config.js alone. -->
+  <script src="live-content.js"></script>
+
+  <!-- Site-wide fixed background video, mounted once outside the React
+       app so it never restarts on scroll or page navigation. Reads
+       window.KC_CONTENT.background (see config.js) — safe to remove,
+       the site still renders fine without it. -->
+  <script src="background-system.js"></script>
+
+  <!-- Tailwind CSS (JIT engine loaded live from the CDN) — generates every
+       utility class app.js uses, on the fly, so no class is ever missing
+       no matter what markup/content changes are made later. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="root"></div>
+  <!-- React 18 (UMD builds, loaded from cdnjs so no build step is needed) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <!-- ERA AI: floating chat assistant bubble. Managed from the Telegram
+       admin bot's "🤖 ERA AI" menu, including the Stop Learning toggle. -->
+  <script src="era-ai-widget.js"></script>
+  <!-- Main app -->
+  <script src="app.js"></script>
+  <!-- Makes external links open safely in a new tab -->
+  <script src="safelinks.js"></script>
+  <!-- Content Editor: pencil-icon tap-to-edit tool for text/images/highlights -->
+  <script src="editor.js"></script>
+</body>
+</html>

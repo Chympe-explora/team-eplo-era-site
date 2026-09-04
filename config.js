@@ -70,6 +70,80 @@
   "logoImage": "logo.png",
   "backgroundImage": "Blue watefall.jpg",
   "instagram": "https://www.instagram.com/unexplored_meghalaya?igsh=ZHZpODB3aXl0bXBu",
+
+  // ==========================================================
+  // 🎬 SITE-WIDE BACKGROUND VIDEO
+  // One cinematic video pinned behind the whole site while visitors
+  // scroll. "global" is the default for every page; add an entry
+  // under "pages" (keyed "home" or "refund-policy") only if that page
+  // needs its own video — leave it "enabled": false to just inherit
+  // the global one. Controlled from Telegram Admin → Background Manager.
+  // ==========================================================
+  "background": {
+    "global": {
+      "enabled": true,
+      "videoUrl": "hero-video.mp4",
+      "videoEnabled": true,
+      "videoOpacity": 100,
+      "fallbackImage": "Trek Trail Mist.jpg",
+      "overlay": {
+        "enabled": true,
+        "color": "#000000",
+        "opacity": 40,
+        "gradient": false
+      }
+    },
+    "pages": {
+      "home": { "enabled": false },
+      "refund-policy": { "enabled": false }
+    }
+  },
+
+  // ==========================================================
+  // 🧱 PER-SECTION BACKGROUND / OPACITY / GLASS
+  // Every section defaults to "transparent" (the global background
+  // video shows through). Give a section its own color/gradient/
+  // image/video here to override just that section — this never
+  // changes the opacity of the section's text, buttons, or cards,
+  // only this separate background layer behind them.
+  // ==========================================================
+  "sectionStyles": {
+    "hero": {
+      "background": { "type": "transparent", "opacity": 100 },
+      "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+    },
+    "destinations": {
+      "background": { "type": "transparent", "opacity": 100 },
+      "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+    },
+    "experiences": {
+      "background": { "type": "transparent", "opacity": 100 },
+      "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+    },
+    "booking": {
+      "background": { "type": "transparent", "opacity": 100 },
+      "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+    },
+    "about": {
+      "background": { "type": "transparent", "opacity": 100 },
+      "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+    },
+    "ratings": {
+      "background": { "type": "transparent", "opacity": 100 },
+      "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+    },
+    "footer": {
+      "background": { "type": "transparent", "opacity": 100 },
+      "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+    }
+  },
   "nav": {
     "items": [
       {
@@ -108,7 +182,13 @@
     "fallbackImage": "Trek Trail Mist.jpg",
     "enabled": true,
     "discoverLabel": "Discover",
-    "discoverTargetId": "destinations"
+    "discoverTargetId": "destinations",
+    "bookNowLabel": "Explore",
+    "bookNowTargetId": "destinations"
+  },
+  "headerCta": {
+    "label": "Book Now",
+    "target": "booking"
   },
   "notice": {
     "enabled": false,

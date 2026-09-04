@@ -76,6 +76,63 @@
     );
   }
 
+  // SectionBG — an optional background layer behind one section
+  // (color / gradient / image / video, its own opacity, its own
+  // overlay, its own glass panel). Renders nothing when the section is
+  // left "transparent" with no overlay/glass — in that (default) case
+  // the site-wide fixed video from background-system.js just shows
+  // through, which is the normal look. Crucially this only ever
+  // touches its own absolutely-positioned layer, never the section's
+  // real content, so text/buttons/cards stay fully opaque and
+  // readable no matter what opacity is set here. Config: see
+  // window.KC_CONTENT.sectionStyles[sectionKey] in config.js.
+  function SectionBG(props) {
+    var cfg = (window.KCBackgrounds && window.KCBackgrounds.resolveSection(props.section)) || {};
+    var bg = cfg.background || { type: "transparent" };
+    var overlay = cfg.overlay || {};
+    var glass = cfg.glass || {};
+    var overlayOn = isOn(overlay.enabled, false);
+    var glassOn = isOn(glass.enabled, false);
+    if ((!bg.type || bg.type === "transparent") && !overlayOn && !glassOn) return null;
+
+    var opacity = Math.max(0, Math.min(100, typeof bg.opacity === "number" ? bg.opacity : 100)) / 100;
+    var bgStyle = { position: "absolute", inset: 0, opacity: opacity };
+    if (bg.type === "color") bgStyle.backgroundColor = bg.color || "transparent";
+    else if (bg.type === "gradient") bgStyle.backgroundImage = bg.gradient || "none";
+    else if (bg.type === "image" && bg.image) {
+      bgStyle.backgroundImage = "url('" + bg.image + "')";
+      bgStyle.backgroundSize = "cover";
+      bgStyle.backgroundPosition = "center";
+    }
+
+    var glassStyle = glassOn ? {
+      position: "absolute", inset: 0,
+      backdropFilter: "blur(" + (glass.blur != null ? glass.blur : 12) + "px)",
+      WebkitBackdropFilter: "blur(" + (glass.blur != null ? glass.blur : 12) + "px)",
+      backgroundColor: "rgba(255,255,255," + (Math.max(0, Math.min(100, glass.opacity != null ? glass.opacity : 20)) / 100) + ")",
+      border: "1px solid rgba(255,255,255," + (Math.max(0, Math.min(100, glass.borderOpacity != null ? glass.borderOpacity : 20)) / 100) + ")",
+      borderRadius: (glass.borderRadius != null ? glass.borderRadius : 24) + "px"
+    } : null;
+
+    return h(
+      "div", { className: "absolute inset-0 -z-10 overflow-hidden", "aria-hidden": "true", style: { pointerEvents: "none" } },
+      bg.type && bg.type !== "transparent" && bg.type !== "video" && h("div", { style: bgStyle }),
+      bg.type === "video" && bg.video && h(
+        "video",
+        { autoPlay: true, muted: true, loop: true, playsInline: true, className: "absolute inset-0 w-full h-full object-cover", style: { opacity: opacity } },
+        h("source", { src: bg.video, type: "video/mp4" })
+      ),
+      glassOn && h("div", { style: glassStyle }),
+      overlayOn && h("div", {
+        style: {
+          position: "absolute", inset: 0,
+          background: overlay.gradient ? "linear-gradient(to bottom, transparent, " + (overlay.color || "#000000") + ")" : (overlay.color || "#000000"),
+          opacity: Math.max(0, Math.min(100, overlay.opacity != null ? overlay.opacity : 30)) / 100
+        }
+      })
+    );
+  }
+
   // Scrolls so the target section sits just below the sticky header,
   // computed from the header's real rendered height each time (rather
   // than relying on the CSS scroll-margin-top trick, which some mobile
@@ -109,6 +166,12 @@
     var phone = (props.phone || "").trim();
     var telHref = phone ? "tel:" + phone.replace(/[^\d+]/g, "") : "";
     var navItems = props.navItems || [];
+    // Item 14 of the master upgrade prompt: the primary Home CTA reads
+    // "Explore" by default now (was "Book Now") — but the label stays
+    // admin-editable via hero.bookNowLabel, and its destination was
+    // already configurable via hero.bookNowTargetId (see App() below),
+    // never hard-coded.
+    var bookNowLabel = hero.bookNowLabel || "Explore";
 
     return h(
       "div",
@@ -193,10 +256,10 @@
               className: "w-full text-left px-4 py-3 rounded-xl text-white bg-white/5 hover:bg-white/15 transition"
             }, item.label);
           }),
-          h("button", { onClick: props.onBookNow, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] text-white py-3 rounded-full font-medium mt-1 transition" }, "Book Now")
+          h("button", { onClick: props.onBookNow, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] text-white py-3 rounded-full font-medium mt-1 transition" }, bookNowLabel)
         ),
 
-        // ---- quote + Book Now ----
+        // ---- quote + Explore/Book Now ----
         h(
           "div", { className: "flex-grow flex flex-col items-center justify-center gap-6 md:gap-8 px-4 text-center" },
           hero.quote && h(
@@ -215,7 +278,7 @@
               onClick: props.onBookNow,
               className: "bg-white text-gray-900 font-bold px-10 md:px-14 py-4 md:py-5 rounded-full shadow-xl hover:bg-gray-100 hover:shadow-2xl transition-all duration-200 text-base md:text-lg lg:text-xl whitespace-nowrap"
             },
-            "Book Now"
+            bookNowLabel
           )
         ),
 
@@ -363,7 +426,8 @@
     var reviews = (ratingsData && ratingsData.ratings) || [];
 
     return h(
-      "section", { id: "ratings", className: "scroll-mt-24 space-y-6" },
+      "section", { id: "ratings", className: "scroll-mt-24 space-y-6 relative" },
+      h(SectionBG, { section: "ratings" }),
       h(
         "div", { className: "text-center" },
         h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight" }, "Visitor Ratings"),
@@ -472,6 +536,14 @@
     var menuState = useState(false); var mobileMenuOpen = menuState[0], setMobileMenuOpen = menuState[1];
     var pageState = useState("home"); var page = pageState[0], setPage = pageState[1];
 
+    // Tell the site-wide fixed background layer (mounted outside React,
+    // see background-system.js) which page is now active, so it can
+    // swap to that page's video/overlay if one is configured — without
+    // ever tearing down and restarting the <video> element itself.
+    useEffect(function () {
+      if (window.KCBackgrounds) window.KCBackgrounds.setPage(page);
+    }, [page]);
+
     // ---- Notice popup: shows once per visitor, closable, admin-resettable ----
     var NOTICE = CONTENT.notice || {};
     var noticeState = useState(function () {
@@ -509,6 +581,14 @@
       { label: "About Us", target: "about" }
     ];
 
+    // The persistent header/mobile-menu CTA button — separate from the
+    // hero's own "Explore" button above. Defaults to the existing
+    // "Book Now" → booking-section behavior, but every part of it
+    // (label + destination) is admin-editable via CONTENT.headerCta,
+    // never hard-coded. See navigateTo() below for what "target"/
+    // "url"/"whatsapp"/"page"/"tel"/"email" can each do.
+    var HEADER_CTA = CONTENT.headerCta || { label: "Book Now", target: "booking" };
+
     function goTo(id) {
       setMobileMenuOpen(false);
       if (page !== "home") {
@@ -519,13 +599,20 @@
       }
     }
 
-    // Generalized nav-item destination resolver. By default a nav item
-    // just scrolls to a section — the section id lives in "target"
-    // (kept editable from the Telegram bot; the old "id" field is
-    // reserved/hidden there, so "target" is what the admin actually
-    // sees and can change). The admin bot can also give an item a
-    // "url" (opens an external link) or set "whatsapp": true (opens a
-    // WhatsApp chat) instead, without any code changes on this end.
+    // Generalized nav-item destination resolver — every navigation
+    // button on the site (header, mobile menu, hero, footer) that
+    // isn't a fixed internal action (like "back to home") routes
+    // through here, so its destination is always admin-configurable
+    // from Telegram, never hard-coded. An item can set exactly one of:
+    //   target: "sectionId"  → scroll to that section on the home page
+    //   page:   "home" | "refund-policy" → switch to that page
+    //   url:    "https://…"  → open an external link (newTab:false to
+    //                          replace the current tab instead)
+    //   whatsapp: true        → open a WhatsApp chat
+    //   tel:    "+91…"        → start a phone call
+    //   email:  "a@b.com"     → open a pre-filled email
+    // Falls back to scrolling to "home" if none of those are set, so a
+    // half-configured item never does nothing or throws.
     function navigateTo(item) {
       if (!item) return;
       if (item.url) {
@@ -538,8 +625,27 @@
         window.open("https://wa.me/" + (CONTENT.whatsappNumber || ""), "_blank");
         return;
       }
+      if (item.tel) {
+        setMobileMenuOpen(false);
+        window.location.href = "tel:" + String(item.tel).replace(/[^\d+]/g, "");
+        return;
+      }
+      if (item.email) {
+        setMobileMenuOpen(false);
+        window.location.href = "mailto:" + item.email;
+        return;
+      }
+      if (item.page === "refund-policy") {
+        goToRefundPolicy();
+        return;
+      }
+      if (item.page === "home" && !item.target) {
+        goHome();
+        return;
+      }
       goTo(item.target || item.id || "home");
     }
+
 
     // ---- Header ----------------------------------------------------
     var header = h(
@@ -569,7 +675,7 @@
         ),
         h(
           "div", { className: "flex items-center gap-2" },
-          h("button", { onClick: function () { goTo("booking"); }, className: "hidden md:block bg-[#2E8B57] hover:bg-[#257a4b] px-5 py-2 rounded-full text-sm font-medium transition" }, "Book Now"),
+          h("button", { onClick: function () { navigateTo(HEADER_CTA); }, className: "hidden md:block bg-[#2E8B57] hover:bg-[#257a4b] px-5 py-2 rounded-full text-sm font-medium transition" }, HEADER_CTA.label || "Book Now"),
           h("button", { onClick: function () { setMobileMenuOpen(!mobileMenuOpen); }, className: "md:hidden w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center" }, mobileMenuOpen ? h(X, { size: 18 }) : h(Menu, { size: 18 }))
         )
       ),
@@ -582,14 +688,15 @@
             className: "w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
           }, item.label);
         }),
-        h("button", { onClick: function () { goTo("booking"); }, className: "w-full bg-[#2E8B57] py-3 rounded-full font-medium" }, "Book Now")
+        h("button", { onClick: function () { navigateTo(HEADER_CTA); }, className: "w-full bg-[#2E8B57] py-3 rounded-full font-medium" }, HEADER_CTA.label || "Book Now")
       )
     );
 
     // ---- Home / introduction ----------------------------------------
     var HERO = CONTENT.hero || { badge: "", title: "", sub: "" };
     var home = h(
-      "section", { id: "home", className: "scroll-mt-24" },
+      "section", { id: "home", className: "scroll-mt-24 relative" },
+      h(SectionBG, { section: "hero" }),
       h(
         GlassCard, { className: "p-8 md:p-12" },
         HERO.badge && h("div", { className: "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-[11px] tracking-widest" }, HERO.badge),
@@ -625,7 +732,8 @@
     // ---- Destinations -------------------------------------------------
     var DEST = CONTENT.destinations || { title: "Destinations", subtitle: "", items: [] };
     var destinations = h(
-      "section", { id: "destinations", className: "scroll-mt-24" },
+      "section", { id: "destinations", className: "scroll-mt-24 relative" },
+      h(SectionBG, { section: "destinations" }),
       h(
         "div", { className: "mb-4 md:mb-6" },
         h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight" }, DEST.title),
@@ -681,7 +789,8 @@
       return null;
     }
     var experiences = h(
-      "section", { id: "experiences", className: "scroll-mt-24" },
+      "section", { id: "experiences", className: "scroll-mt-24 relative" },
+      h(SectionBG, { section: "experiences" }),
       h(
         GlassCard, { className: "p-6 md:p-10" },
         h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight text-center" }, EXP.title),
@@ -695,7 +804,8 @@
     // ---- Booking / "Why Book Us" ---------------------------------------
     var BOOKING = CONTENT.booking || { title: "WHY BOOK US?", subtitle: "", intro: "", reasons: [], closing: [] };
     var booking = h(
-      "section", { id: "booking", className: "scroll-mt-24" },
+      "section", { id: "booking", className: "scroll-mt-24 relative" },
+      h(SectionBG, { section: "booking" }),
       h(
         GlassCard, { className: "p-8 md:p-12" },
         h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight text-center" }, BOOKING.title),
@@ -727,7 +837,8 @@
     // ---- About Us -------------------------------------------------------
     var ABOUT = CONTENT.about || { title: "About Us", blocks: [] };
     var about = h(
-      "section", { id: "about", className: "scroll-mt-24" },
+      "section", { id: "about", className: "scroll-mt-24 relative" },
+      h(SectionBG, { section: "about" }),
       h(
         GlassCard, { className: "p-8 md:p-12" },
         h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight text-center" }, ABOUT.title),
@@ -762,7 +873,8 @@
 
     // ---- Footer -------------------------------------------------------
     var footer = h(
-      "footer", { className: "pt-6" },
+      "footer", { className: "pt-6 relative" },
+      h(SectionBG, { section: "footer" }),
       h(
         GlassCard, { className: "p-8 md:p-10" },
         h("h3", { className: "text-center tracking-[0.15em] text-lg font-semibold" }, FOOTER.brandName),
@@ -836,7 +948,12 @@
 
     return h(
       "div", { className: "min-h-screen text-white font-[Inter,Poppins,sans-serif] relative selection:bg-emerald-500/30" },
-      h(
+      // The site-wide fixed background video/image normally lives
+      // outside React entirely (see background-system.js, mounted
+      // directly on <body> so it survives re-renders and page nav
+      // without restarting). This is just a safety net for the rare
+      // case that script failed to load — same look as before.
+      !window.KCBackgrounds && h(
         "div", { className: "fixed inset-0 -z-10" },
         h("img", { src: CONTENT.backgroundImage, className: "w-full h-full object-cover" }),
         h("div", { className: "absolute inset-0 bg-black/40 backdrop-blur-[1px]" }),

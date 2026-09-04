@@ -44,6 +44,11 @@
        config.js alone. -->
   <script src="live-content.js"></script>
 
+  <!-- Site-wide fixed background video, mounted once outside the React
+       app so it never restarts on scroll or page navigation. Reads
+       window.KC_CONTENT.background (see config.js) — safe to remove,
+       the site still renders fine without it. -->
+  <script src="background-system.js"></script>
 
   <!-- Tailwind CSS (JIT engine loaded live from the CDN) — generates every
        utility class app.js uses, on the fly, so no class is ever missing

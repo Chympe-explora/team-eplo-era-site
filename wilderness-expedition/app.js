@@ -196,6 +196,62 @@
     );
   }
 
+  // SectionBG — an optional background layer behind one page (color /
+  // gradient / image / video, its own opacity, its own overlay, its
+  // own glass panel). Renders nothing when left "transparent" with no
+  // overlay/glass — in that (default) case the site-wide fixed video
+  // from background-system.js just shows through, which is the normal
+  // look. Only ever touches its own absolutely-positioned layer, never
+  // the page's real content, so text/buttons/cards stay fully opaque
+  // and readable no matter what opacity is set here. Config: see
+  // window.KC_CONTENT.sectionStyles["1".."7"] in config.js.
+  function SectionBG(props) {
+    var cfg = (window.KCBackgrounds && window.KCBackgrounds.resolveSection(props.section)) || {};
+    var bg = cfg.background || { type: "transparent" };
+    var overlay = cfg.overlay || {};
+    var glass = cfg.glass || {};
+    var overlayOn = isOn(overlay.enabled, false);
+    var glassOn = isOn(glass.enabled, false);
+    if ((!bg.type || bg.type === "transparent") && !overlayOn && !glassOn) return null;
+
+    var opacity = Math.max(0, Math.min(100, typeof bg.opacity === "number" ? bg.opacity : 100)) / 100;
+    var bgStyle = { position: "absolute", inset: 0, opacity: opacity };
+    if (bg.type === "color") bgStyle.backgroundColor = bg.color || "transparent";
+    else if (bg.type === "gradient") bgStyle.backgroundImage = bg.gradient || "none";
+    else if (bg.type === "image" && bg.image) {
+      bgStyle.backgroundImage = "url('" + bg.image + "')";
+      bgStyle.backgroundSize = "cover";
+      bgStyle.backgroundPosition = "center";
+    }
+
+    var glassStyle = glassOn ? {
+      position: "absolute", inset: 0,
+      backdropFilter: "blur(" + (glass.blur != null ? glass.blur : 12) + "px)",
+      WebkitBackdropFilter: "blur(" + (glass.blur != null ? glass.blur : 12) + "px)",
+      backgroundColor: "rgba(255,255,255," + (Math.max(0, Math.min(100, glass.opacity != null ? glass.opacity : 20)) / 100) + ")",
+      border: "1px solid rgba(255,255,255," + (Math.max(0, Math.min(100, glass.borderOpacity != null ? glass.borderOpacity : 20)) / 100) + ")",
+      borderRadius: (glass.borderRadius != null ? glass.borderRadius : 24) + "px"
+    } : null;
+
+    return h(
+      "div", { className: "absolute inset-0 -z-10 overflow-hidden", "aria-hidden": "true", style: { pointerEvents: "none" } },
+      bg.type && bg.type !== "transparent" && bg.type !== "video" && h("div", { style: bgStyle }),
+      bg.type === "video" && bg.video && h(
+        "video",
+        { autoPlay: true, muted: true, loop: true, playsInline: true, className: "absolute inset-0 w-full h-full object-cover", style: { opacity: opacity } },
+        h("source", { src: bg.video, type: "video/mp4" })
+      ),
+      glassOn && h("div", { style: glassStyle }),
+      overlayOn && h("div", {
+        style: {
+          position: "absolute", inset: 0,
+          background: overlay.gradient ? "linear-gradient(to bottom, transparent, " + (overlay.color || "#000000") + ")" : (overlay.color || "#000000"),
+          opacity: Math.max(0, Math.min(100, overlay.opacity != null ? overlay.opacity : 30)) / 100
+        }
+      })
+    );
+  }
+
   // ---------------------------------------------------------------------
   // VideoHero — full-width video background with logo, call + menu
   // buttons, an admin-editable quote, Book Now, and a Discover button
@@ -217,6 +273,12 @@
     var phone = (props.phone || "").trim();
     var telHref = phone ? "tel:" + phone.replace(/[^\d+]/g, "") : "";
     var navItems = props.navItems || [];
+    // Item 14 of the master upgrade prompt: the primary Home CTA reads
+    // "Explore" by default now (was "Book Now") — label stays
+    // admin-editable via hero.bookNowLabel; destination stays
+    // admin-editable too (see hero.bookNowTargetPage in config.js /
+    // the onBookNow wiring in App() below), never hard-coded.
+    var bookNowLabel = hero.bookNowLabel || "Explore";
 
     return h(
       "div",
@@ -293,7 +355,7 @@
               className: "w-full text-left px-4 py-3 rounded-xl text-white bg-white/5 hover:bg-white/15 transition"
             }, label);
           }),
-          h("button", { onClick: props.onBookNow, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] text-white py-3 rounded-full font-medium mt-1 transition" }, "Book Now")
+          h("button", { onClick: props.onBookNow, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] text-white py-3 rounded-full font-medium mt-1 transition" }, bookNowLabel)
         ),
 
         // ---- quote + Book Now ----
@@ -315,7 +377,7 @@
               onClick: props.onBookNow,
               className: "bg-white text-gray-900 font-bold px-10 md:px-14 py-4 md:py-5 rounded-full shadow-xl hover:bg-gray-100 hover:shadow-2xl transition-all duration-200 text-base md:text-lg lg:text-xl whitespace-nowrap"
             },
-            "Book Now"
+            bookNowLabel
           )
         ),
 
@@ -581,6 +643,19 @@
   // ---------------------------------------------------------------------
   function App() {
     var pageState = useState(1); var page = pageState[0], setPage = pageState[1];
+
+    // Every "Book Now" button in the header/hero/CTAs jumps to this
+    // page by default (2 = package selection) — admin-editable via
+    // CONTENT.headerCta.targetPage, never hard-coded.
+    var HEADER_CTA_TARGET_PAGE = (CONTENT.headerCta && CONTENT.headerCta.targetPage) || 2;
+
+    // Tell the site-wide fixed background layer (mounted outside React,
+    // see background-system.js) which page is now active, so it can
+    // swap to that page's video/overlay if one is configured — without
+    // ever tearing down and restarting the <video> element itself.
+    useEffect(function () {
+      if (window.KCBackgrounds) window.KCBackgrounds.setPage(String(page));
+    }, [page]);
     var pkgState = useState(null); var pkg = pkgState[0], setPkg = pkgState[1];
     var menuState = useState(false); var mobileMenuOpen = menuState[0], setMobileMenuOpen = menuState[1];
 
@@ -1096,7 +1171,7 @@
         ),
         h(
           "div", { className: "flex items-center gap-2" },
-          h("button", { onClick: function () { setPage(2); }, className: "hidden md:block bg-[#2E8B57] hover:bg-[#257a4b] px-5 py-2 rounded-full text-sm font-medium transition" }, t("bookNow", "Book Now")),
+          h("button", { onClick: function () { setPage(HEADER_CTA_TARGET_PAGE); }, className: "hidden md:block bg-[#2E8B57] hover:bg-[#257a4b] px-5 py-2 rounded-full text-sm font-medium transition" }, t("bookNow", "Book Now")),
           h("button", { onClick: function () { setMobileMenuOpen(!mobileMenuOpen); }, className: "md:hidden w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center" }, mobileMenuOpen ? h(X, { size: 18 }) : h(Menu, { size: 18 }))
         )
       ),
@@ -1109,7 +1184,7 @@
             className: "w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
           }, navLabel(p));
         }),
-        h("button", { onClick: function () { setPage(2); setMobileMenuOpen(false); }, className: "w-full bg-[#2E8B57] py-3 rounded-full font-medium" }, t("bookNow", "Book Now")),
+        h("button", { onClick: function () { setPage(HEADER_CTA_TARGET_PAGE); setMobileMenuOpen(false); }, className: "w-full bg-[#2E8B57] py-3 rounded-full font-medium" }, t("bookNow", "Book Now")),
         h("a", { href: "admin.html", className: "block text-center text-[11px] text-white/30 pt-1" }, "Admin")
       )
     );
@@ -1117,7 +1192,8 @@
     // ---- Page 1: Home ------------------------------------------------
     var titleWords = CONTENT.hero.title.split(" ");
     var page1 = page === 1 && h(
-      "main", { id: "kc-content-start", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24" },
+      "main", { id: "kc-content-start", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24 relative" },
+      h(SectionBG, { section: "1" }),
       h(
         "div", { className: "grid md:grid-cols-[1.15fr_0.85fr] gap-6" },
         h(
@@ -1128,7 +1204,7 @@
             titleWords.slice(0, 2).join(" "), h("br"), h("span", { className: "text-white/70" }, titleWords.slice(2).join(" "))
           ),
           h("p", { className: "mt-5 text-white/70 text-[15px] leading-relaxed max-w-[520px]" }, CONTENT.hero.sub),
-          h("div", { className: "mt-8 flex gap-3" }, h("button", { onClick: function () { setPage(2); }, className: "bg-[#2E8B57] hover:bg-[#257a4b] px-7 py-3 rounded-full text-sm font-semibold flex items-center gap-2" }, "Book Now ", h(ArrowRight, { size: 16 })))
+          h("div", { className: "mt-8 flex gap-3" }, h("button", { onClick: function () { setPage(HEADER_CTA_TARGET_PAGE); }, className: "bg-[#2E8B57] hover:bg-[#257a4b] px-7 py-3 rounded-full text-sm font-semibold flex items-center gap-2" }, "Book Now ", h(ArrowRight, { size: 16 })))
         ),
         h(
           GlassCard, { className: "p-5 md:p-6 flex flex-col justify-between" },
@@ -1141,7 +1217,7 @@
             h("div", { className: "flex items-center justify-between" }, h("span", { className: "text-sm text-white/70 flex items-center gap-2" }, h(IndianRupee, { size: 16 }), t("price", " Price")), h("span", { className: "text-sm font-medium" }, CONTENT.hero.priceLabel)),
             h("div", { className: "mt-6 rounded-[16px] overflow-hidden border border-white/10" }, h("img", { src: CONTENT.sectionImages.heroCave, className: "w-full h-[180px] object-cover" }))
           ),
-          h("button", { onClick: function () { setPage(2); }, className: "mt-6 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full text-sm font-semibold" }, t("bookNow", "Book Now"))
+          h("button", { onClick: function () { setPage(HEADER_CTA_TARGET_PAGE); }, className: "mt-6 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full text-sm font-semibold" }, t("bookNow", "Book Now"))
         )
       ),
       SECTIONS.trustBar && h(
@@ -1428,7 +1504,8 @@
 
     // ---- Page 2: Packages & Gallery ------------------------------------
     var page2 = page === 2 && h(
-      "main", { id: "kc-packages", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24" },
+      "main", { id: "kc-packages", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24 relative" },
+      h(SectionBG, { section: "2" }),
       h(
         GlassCard, { className: "p-8 md:p-10 text-center" },
         h("h2", { className: "text-3xl md:text-4xl font-bold" }, t("ourAdventurePackages", "Our Adventure Packages")),
@@ -1636,7 +1713,8 @@
     );
 
     var page3 = page === 3 && h(
-      "main", { className: "max-w-[900px] mx-auto px-4 md:px-6 pb-32 space-y-6" },
+      "main", { className: "max-w-[900px] mx-auto px-4 md:px-6 pb-32 space-y-6 relative" },
+      h(SectionBG, { section: "3" }),
       h(
         GlassCard, { className: "p-6 md:p-8" },
         h("div", { className: "flex items-center gap-3" }, h("div", { className: "w-8 h-8 rounded-full flex items-center justify-center bg-[#2E8B57]" }, h(Compass, { size: 16 })), h("h2", { className: "text-2xl font-semibold" }, packageLabel, " Booking")),
@@ -1656,7 +1734,8 @@
 
     // ---- Page 4: Pricing / invoice calculator --
     var page4 = page === 4 && h(
-      "main", { className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6" },
+      "main", { className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 relative" },
+      h(SectionBG, { section: "4" }),
       h(GlassCard, { className: "p-8 text-center" }, h("h2", { className: "text-3xl font-bold" }, t("pricingFacilities", "Pricing & Facilities")), h("p", { className: "text-white/60 text-sm mt-2" }, packageLabel, " — itemized invoice")),
       h(
         "div", { className: "grid md:grid-cols-[1fr_380px] gap-6" },
@@ -1683,7 +1762,8 @@
     // ---- Page 5: Payment -----------------------------------------------
     var PAY = CONTENT.payment || {};
     var page5 = page === 5 && h(
-      "main", { className: "max-w-[900px] mx-auto px-4 md:px-6 pb-32" },
+      "main", { className: "max-w-[900px] mx-auto px-4 md:px-6 pb-32 relative" },
+      h(SectionBG, { section: "5" }),
       h(
         GlassCard, { className: "p-6 md:p-8" },
         h("h2", { className: "text-2xl font-semibold" }, t("paymentOptionsTitle", "Payment Options")),
@@ -1799,7 +1879,8 @@
         : { icon: h("div", { className: "w-8 h-8 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" }), ring: "bg-emerald-500/10 border-emerald-400/20", title: "Booking In Progress", badge: "bg-emerald-500/15 border-emerald-400/30 text-emerald-300", badgeText: "Sent to your tour guide — waiting for their confirmation" };
 
     var page6 = page === 6 && h(
-      "main", { className: "max-w-[600px] mx-auto px-4 md:px-6 pb-32" },
+      "main", { className: "max-w-[600px] mx-auto px-4 md:px-6 pb-32 relative" },
+      h(SectionBG, { section: "6" }),
       h(
         GlassCard, { className: "p-10 text-center" },
         h("div", { className: "w-20 h-20 mx-auto rounded-full border flex items-center justify-center " + statusVisual.ring }, statusVisual.icon),
@@ -1844,7 +1925,8 @@
 
     // ---- Page 7: Refund Policy (only reachable via the footer link) ----
     var page7 = page === 7 && h(
-      "main", { className: "max-w-[760px] mx-auto px-4 md:px-6 pb-32" },
+      "main", { className: "max-w-[760px] mx-auto px-4 md:px-6 pb-32 relative" },
+      h(SectionBG, { section: "7" }),
       h(
         GlassCard, { className: "p-6 md:p-10" },
         h("h1", { className: "text-2xl md:text-3xl font-bold" }, REFUND_POLICY.title),
@@ -1921,7 +2003,7 @@
           className: "px-5 py-2 rounded-full bg-white/10 border border-white/10 text-sm flex items-center gap-2"
         }, h(ArrowLeft, { size: 16 }), t("back", " Back")),
         page === 1 && h("button", {
-          onClick: function () { setPage(2); },
+          onClick: function () { setPage(HEADER_CTA_TARGET_PAGE); },
           className: "px-6 py-2 rounded-full bg-[#2E8B57] hover:bg-[#257a4b] text-sm font-medium flex items-center gap-2"
         }, t("next", "Next "), h(ArrowRight, { size: 16 })),
         page !== 1 && h("div", { className: "w-[92px]" })
@@ -1949,7 +2031,12 @@
 
     return h(
       "div", { className: "min-h-screen text-white font-[Inter,Poppins,sans-serif] relative selection:bg-emerald-500/30" },
-      h(
+      // The site-wide fixed background video/image normally lives
+      // outside React entirely (see background-system.js, mounted
+      // directly on <body> so it survives re-renders and page nav
+      // without restarting). This is just a safety net for the rare
+      // case that script failed to load — same look as before.
+      !window.KCBackgrounds && h(
         "div", { className: "fixed inset-0 -z-10" },
         h("img", { src: CONTENT.backgrounds[0], className: "w-full h-full object-cover" }),
         h("div", { className: "absolute inset-0 bg-black/40 backdrop-blur-[1px]" }),
@@ -1963,7 +2050,7 @@
         menuOpen: mobileMenuOpen,
         onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
         onNavClick: onHeroNavClick,
-        onBookNow: function () { goToPackage("sharedTour"); },
+        onBookNow: function () { var tp = CONTENT.hero && CONTENT.hero.bookNowTargetPage; if (tp) { setPage(tp); } else { goToPackage("sharedTour"); } },
         onDiscover: function () { scrollToId("kc-content-start"); }
       }),
       page === 1 && showNotice && h(NoticePopup, {

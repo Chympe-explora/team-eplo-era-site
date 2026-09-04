@@ -68,7 +68,6 @@
   "siteSub": "ADVENTURE ERA AWAITS",
   "whatsappNumber": "916001877518",
   "logoImage": "logo.png",
-  "typography": { "headingColor": "#ffffff", "bodyColor": "#ffffff" },
   "backgroundImage": "Blue watefall.jpg",
   "instagram": "https://www.instagram.com/unexplored_meghalaya?igsh=ZHZpODB3aXl0bXBu",
 
@@ -112,37 +111,37 @@
     "hero": {
       "background": { "type": "transparent", "opacity": 100 },
       "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
     },
     "destinations": {
       "background": { "type": "transparent", "opacity": 100 },
       "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
     },
     "experiences": {
       "background": { "type": "transparent", "opacity": 100 },
       "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
     },
     "booking": {
       "background": { "type": "transparent", "opacity": 100 },
       "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
     },
     "about": {
       "background": { "type": "transparent", "opacity": 100 },
       "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
     },
     "ratings": {
       "background": { "type": "transparent", "opacity": 100 },
       "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
     },
     "footer": {
       "background": { "type": "transparent", "opacity": 100 },
       "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
+      "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
     }
   },
   "nav": {

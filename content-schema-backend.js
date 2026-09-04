@@ -5,6 +5,7 @@ export const SCHEMA_DEFAULTS = {
       "siteSub": "ADVENTURE & CAMPING",
       "whatsappNumber": "916001877518",
       "logoImage": "logo.png",
+      "typography": { "headingColor": "#ffffff", "bodyColor": "#ffffff" },
       "backgroundImage": "Blue watefall.jpg",
       "instagram": "https://www.instagram.com/unexplored_meghalaya?igsh=ZHZpODB3aXl0bXBu",
       "background": {
@@ -25,37 +26,37 @@ export const SCHEMA_DEFAULTS = {
         "hero": {
           "background": { "type": "transparent", "opacity": 100 },
           "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
         },
         "destinations": {
           "background": { "type": "transparent", "opacity": 100 },
           "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
         },
         "experiences": {
           "background": { "type": "transparent", "opacity": 100 },
           "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
         },
         "booking": {
           "background": { "type": "transparent", "opacity": 100 },
           "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
         },
         "about": {
           "background": { "type": "transparent", "opacity": 100 },
           "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
         },
         "ratings": {
           "background": { "type": "transparent", "opacity": 100 },
           "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
         },
         "footer": {
           "background": { "type": "transparent", "opacity": 100 },
           "overlay": { "enabled": false, "color": "#000000", "opacity": 30, "gradient": false },
-          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }
+          "glass": { "enabled": false, "opacity": 20, "blur": 12, "borderOpacity": 20, "borderRadius": 24 }, "typography": { "headingColor": "", "bodyColor": "" }
         }
       },
       "nav": {
@@ -1282,6 +1283,7 @@ export const SCHEMA_DEFAULTS = {
         "image": "guide.jpg"
       },
       "logoImage": "logo.png",
+      "typography": { "headingColor": "#ffffff", "bodyColor": "#ffffff" },
       "sectionImages": {
         "heroCave": "Blue water cave.jpg",
         "trekCard": "Trekking.jpg",
@@ -2241,6 +2243,7 @@ export const SCHEMA_DEFAULTS = {
         "image": "guide.jpg"
       },
       "logoImage": "logo.png",
+      "typography": { "headingColor": "#ffffff", "bodyColor": "#ffffff" },
       "sectionImages": {
         "heroCave": "highlight-river-crossing.jpg",
         "trekCard": "trek-card.jpg",

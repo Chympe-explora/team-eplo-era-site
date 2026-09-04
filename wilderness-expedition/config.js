@@ -130,7 +130,6 @@
     // ---- Site identity ----
     siteName: "WILDERNESS EXPEDITION",
     siteSub: "SIX-DAY MEGHALAYA EXPEDITION",
-    typography: { headingColor: "#ffffff", bodyColor: "#ffffff" },
 
     // ---- 🎬 Site-wide background video ----
     // One cinematic video pinned behind the whole site while visitors

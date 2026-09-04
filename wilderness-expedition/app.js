@@ -724,6 +724,34 @@
       return function () { clearTimeout(timer); };
     }, [bookingStatus, trackingId]);
 
+    // ---- Refund request (visitor-initiated, only once confirmed) --------
+    var refundStatusState = useState("none"); var refundStatus = refundStatusState[0], setRefundStatus = refundStatusState[1];
+    var refundBusyState = useState(false); var refundBusy = refundBusyState[0], setRefundBusy = refundBusyState[1];
+    var refundErrorState = useState(""); var refundError = refundErrorState[0], setRefundError = refundErrorState[1];
+    var stopRefundWatchRef = useRef(null);
+
+    function requestRefund() {
+      if (!trackingId || refundBusy) return;
+      setRefundBusy(true);
+      setRefundError("");
+      window.KCBridge.requestRefund(trackingId, "Requested from booking confirmation page").then(function (res) {
+        setRefundBusy(false);
+        if (!res || !res.ok) {
+          setRefundError((res && res.error) || "Couldn't send the refund request — please try again or message us directly.");
+          return;
+        }
+        setRefundStatus(res.refundStatus || "requested");
+        if (stopRefundWatchRef.current) stopRefundWatchRef.current();
+        stopRefundWatchRef.current = window.KCBridge.watchRefundStatus(trackingId, function (status) {
+          setRefundStatus(status);
+        });
+      });
+    }
+
+    useEffect(function () {
+      return function () { if (stopRefundWatchRef.current) stopRefundWatchRef.current(); };
+    }, []);
+
     // Silently mirror the in-progress form to the guide's Telegram as the
     // visitor fills it in. Fails silently if the bridge/backend is
     // unreachable — never interrupts the booking flow.
@@ -1918,6 +1946,30 @@
             h(Phone, { size: 18 }),
             bookingStatus === "confirmed" ? "Message Your Guide" : "WhatsApp"
           )
+        ),
+        // Refund request — only offered once the guide has actually
+        // confirmed the booking (nothing to refund before that; just
+        // cancel instead, which the guide can already do by rejecting).
+        bookingStatus === "confirmed" && h(
+          "div", { className: "mt-4" },
+          refundStatus === "none" && h(
+            "button",
+            { onClick: requestRefund, disabled: refundBusy, className: "w-full bg-white/5 border border-white/10 py-3 rounded-full font-semibold text-sm disabled:opacity-50" },
+            refundBusy ? "Sending…" : "Request a Refund"
+          ),
+          refundStatus === "requested" && h(
+            "div", { className: "px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-200 text-sm text-center" },
+            "Refund requested — waiting for your guide to review it."
+          ),
+          refundStatus === "approved" && h(
+            "div", { className: "px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 text-sm text-center" },
+            "✅ Refund approved — your guide will be in touch about next steps."
+          ),
+          refundStatus === "denied" && h(
+            "div", { className: "px-4 py-3 rounded-xl bg-red-500/10 border border-red-400/30 text-red-300 text-sm text-center" },
+            "Refund request declined. Message your guide on WhatsApp if you'd like to discuss it."
+          ),
+          refundError && h("p", { className: "mt-2 text-amber-300 text-xs text-center" }, refundError)
         ),
         h("button", { onClick: function () { if (stopWatchRef.current) stopWatchRef.current(); setPage(1); setPkg(null); setBookingCode(""); setTrackingId(""); setBookingStatus("pending"); setSubmitError(""); setSubmitted(false); }, className: "mt-4 w-full bg-white/5 border border-white/10 py-3 rounded-full font-semibold" }, t("backToHome", "Back to Home"))
       )

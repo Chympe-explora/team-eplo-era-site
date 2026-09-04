@@ -570,7 +570,8 @@
       fallbackImage: window.KC_IMAGES.heroBg1,
       enabled: true,
       discoverLabel: "Discover",
-      bookNowLabel: "Explore"
+      bookNowLabel: "Explore",
+      bookNowLink: ""
       // No bookNowTargetPage set here on purpose — the default behavior
       // (jump straight into booking the shared-tour package, skipping
       // package selection) lives in app.js's onBookNow. Set this to a

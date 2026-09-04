@@ -382,11 +382,15 @@
         ),
 
         // ---- Discover, bottom of hero — scrolls to the content below ----
+        // Nudged up from the very bottom edge (pb-6 instead of pb-1,
+        // plus a safe-area inset) so mobile browser chrome — Chrome's
+        // address bar, iOS's home-indicator bar, etc. — never covers it.
         h(
           "button",
           {
             onClick: props.onDiscover,
-            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-1 text-white/90 hover:text-white transition"
+            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-6 md:pb-3 text-white/90 hover:text-white transition",
+            style: { marginBottom: "env(safe-area-inset-bottom, 0px)" }
           },
           h("span", { className: "text-[13px] md:text-sm tracking-[0.2em] font-medium" }, hero.discoverLabel || "Discover"),
           h(ChevronDown, { size: 22 })
@@ -2102,7 +2106,12 @@
         menuOpen: mobileMenuOpen,
         onToggleMenu: function () { setMobileMenuOpen(!mobileMenuOpen); },
         onNavClick: onHeroNavClick,
-        onBookNow: function () { var tp = CONTENT.hero && CONTENT.hero.bookNowTargetPage; if (tp) { setPage(tp); } else { goToPackage("sharedTour"); } },
+        onBookNow: function () {
+          var link = CONTENT.hero && CONTENT.hero.bookNowLink;
+          if (link) { window.open(link, "_blank"); return; }
+          var tp = CONTENT.hero && CONTENT.hero.bookNowTargetPage;
+          if (tp) { setPage(tp); } else { goToPackage("sharedTour"); }
+        },
         onDiscover: function () { scrollToId("kc-content-start"); }
       }),
       page === 1 && showNotice && h(NoticePopup, {

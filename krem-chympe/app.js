@@ -1246,7 +1246,7 @@
     // ---- Page 1: Home ------------------------------------------------
     var titleWords = CONTENT.hero.title.split(" ");
     var page1 = page === 1 && h(
-      "main", { id: "kc-content-start", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24 relative" },
+      "main", { id: "kc-content-start", "data-kc-page": "1", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24 relative" },
       h(SectionBG, { section: "1" }),
       h(
         "div", { className: "grid md:grid-cols-[1.15fr_0.85fr] gap-6" },
@@ -1558,7 +1558,7 @@
 
     // ---- Page 2: Packages & Gallery ------------------------------------
     var page2 = page === 2 && h(
-      "main", { id: "kc-packages", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24 relative" },
+      "main", { id: "kc-packages", "data-kc-page": "2", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 scroll-mt-24 relative" },
       h(SectionBG, { section: "2" }),
       h(
         GlassCard, { className: "p-8 md:p-10 text-center" },
@@ -1767,7 +1767,7 @@
     );
 
     var page3 = page === 3 && h(
-      "main", { className: "max-w-[900px] mx-auto px-4 md:px-6 pb-32 space-y-6 relative" },
+      "main", { "data-kc-page": "3", className: "max-w-[900px] mx-auto px-4 md:px-6 pb-32 space-y-6 relative" },
       h(SectionBG, { section: "3" }),
       h(
         GlassCard, { className: "p-6 md:p-8" },
@@ -1788,7 +1788,7 @@
 
     // ---- Page 4: Pricing / invoice calculator --
     var page4 = page === 4 && h(
-      "main", { className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 relative" },
+      "main", { "data-kc-page": "4", className: "max-w-[1280px] mx-auto px-4 md:px-6 pb-32 space-y-6 relative" },
       h(SectionBG, { section: "4" }),
       h(GlassCard, { className: "p-8 text-center" }, h("h2", { className: "text-3xl font-bold" }, t("pricingFacilities", "Pricing & Facilities")), h("p", { className: "text-white/60 text-sm mt-2" }, packageLabel, " — itemized invoice")),
       h(
@@ -1816,7 +1816,7 @@
     // ---- Page 5: Payment -----------------------------------------------
     var PAY = CONTENT.payment || {};
     var page5 = page === 5 && h(
-      "main", { className: "max-w-[900px] mx-auto px-4 md:px-6 pb-32 relative" },
+      "main", { "data-kc-page": "5", className: "max-w-[900px] mx-auto px-4 md:px-6 pb-32 relative" },
       h(SectionBG, { section: "5" }),
       h(
         GlassCard, { className: "p-6 md:p-8" },
@@ -1933,7 +1933,7 @@
         : { icon: h("div", { className: "w-8 h-8 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" }), ring: "bg-emerald-500/10 border-emerald-400/20", title: "Booking In Progress", badge: "bg-emerald-500/15 border-emerald-400/30 text-emerald-300", badgeText: "Sent to your tour guide — waiting for their confirmation" };
 
     var page6 = page === 6 && h(
-      "main", { className: "max-w-[600px] mx-auto px-4 md:px-6 pb-32 relative" },
+      "main", { "data-kc-page": "6", className: "max-w-[600px] mx-auto px-4 md:px-6 pb-32 relative" },
       h(SectionBG, { section: "6" }),
       h(
         GlassCard, { className: "p-10 text-center" },
@@ -2003,7 +2003,7 @@
 
     // ---- Page 7: Refund Policy (only reachable via the footer link) ----
     var page7 = page === 7 && h(
-      "main", { className: "max-w-[760px] mx-auto px-4 md:px-6 pb-32 relative" },
+      "main", { "data-kc-page": "7", className: "max-w-[760px] mx-auto px-4 md:px-6 pb-32 relative" },
       h(SectionBG, { section: "7" }),
       h(
         GlassCard, { className: "p-6 md:p-10" },

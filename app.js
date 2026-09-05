@@ -290,7 +290,7 @@
           "button",
           {
             onClick: props.onDiscover,
-            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-6 md:pb-3 text-white/90 hover:text-white transition",
+            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-12 md:pb-6 text-white/90 hover:text-white transition",
             style: { marginBottom: "env(safe-area-inset-bottom, 0px)" }
           },
           h("span", { className: "text-[13px] md:text-sm tracking-[0.2em] font-medium" }, hero.discoverLabel || "Discover"),
@@ -392,6 +392,10 @@
     // was taking up a lot of vertical space on the page; now it only
     // expands when someone actually wants to read them.
     var commentsOpenState = useState(false); var commentsOpen = commentsOpenState[0], setCommentsOpen = commentsOpenState[1];
+    // The "leave a rating" form is collapsed behind a toggle too, for
+    // the same reason — it was always visible and took up a lot of
+    // room even for visitors who just wanted to glance at the score.
+    var rateFormOpenState = useState(false); var rateFormOpen = rateFormOpenState[0], setRateFormOpen = rateFormOpenState[1];
 
     function loadRatings() {
       fetch(API_BASE + "/api/ratings?site=" + encodeURIComponent(siteId))
@@ -434,48 +438,61 @@
     var reviews = (ratingsData && ratingsData.ratings) || [];
 
     return h(
-      "section", { id: "ratings", className: "scroll-mt-24 space-y-6 relative" },
+      "section", { id: "ratings", className: "scroll-mt-24 space-y-4 relative" },
       h(SectionBG, { section: "ratings" }),
       h(
         "div", { className: "text-center" },
-        h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight" }, "Visitor Ratings"),
-        h("p", { className: "text-white/60 text-sm mt-1" }, "See what past travelers say, or leave your own rating.")
+        h("h2", { className: "text-xl md:text-2xl font-bold tracking-tight" }, "Visitor Ratings"),
+        h("p", { className: "text-white/60 text-xs mt-1" }, "See what past travelers say, or leave your own rating.")
       ),
 
       h(
-        GlassCard, { className: "p-4 md:p-6 grid md:grid-cols-[auto_1fr] gap-6 items-center" },
+        GlassCard, { className: "p-4 grid md:grid-cols-[auto_1fr] gap-4 items-center" },
         h(
-          "div", { className: "text-center md:border-r md:border-white/10 md:pr-8" },
-          h("div", { className: "text-3xl font-bold" }, average || "\u2013"),
-          h(Stars, { value: average, size: 14 }),
-          h("div", { className: "text-white/60 text-xs mt-1" }, count + (count === 1 ? " rating" : " ratings"))
+          "div", { className: "text-center md:border-r md:border-white/10 md:pr-6" },
+          h("div", { className: "text-2xl font-bold" }, average || "\u2013"),
+          h(Stars, { value: average, size: 13 }),
+          h("div", { className: "text-white/60 text-xs mt-0.5" }, count + (count === 1 ? " rating" : " ratings"))
         ),
         h(
-          "div", { className: "space-y-2 w-full" },
+          "div", { className: "space-y-1.5 w-full" },
           [5, 4, 3, 2, 1].map(function (star) {
             var n = breakdown[star] || 0;
             var pct = count ? Math.round((n / count) * 100) : 0;
             return h(
-              "div", { key: star, className: "flex items-center gap-2.5 text-xs" },
-              h("span", { className: "w-8 text-white/60" }, star + "\u2605"),
-              h("div", { className: "flex-1 h-2 rounded-full bg-white/10 overflow-hidden" }, h("div", { className: "h-full bg-amber-400 rounded-full", style: { width: pct + "%" } })),
+              "div", { key: star, className: "flex items-center gap-2 text-xs" },
+              h("span", { className: "w-7 text-white/60" }, star + "\u2605"),
+              h("div", { className: "flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden" }, h("div", { className: "h-full bg-amber-400 rounded-full", style: { width: pct + "%" } })),
               h("span", { className: "w-6 text-white/40 text-right" }, n)
             );
           })
         )
       ),
 
-      h(
-        GlassCard, { className: "p-6 md:p-8 max-w-[560px] mx-auto" },
+      // ---- Leave a rating — collapsed behind a toggle, same idea as
+      // the comments section below: most visitors are just here to
+      // read the score, not fill out a form, so it shouldn't cost them
+      // scroll space by default. ----
+      !rateFormOpen && !justSubmitted && h(
+        "button",
+        {
+          onClick: function () { setRateFormOpen(true); },
+          className: "w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm font-medium"
+        },
+        "\u2b50 Rate Your Trip"
+      ),
+
+      (rateFormOpen || justSubmitted) && h(
+        GlassCard, { className: "p-4 md:p-5 max-w-[560px] mx-auto" },
         justSubmitted
           ? h(
-              "div", { className: "text-center py-4" },
-              h("div", { className: "text-3xl mb-2" }, "\ud83d\ude4f"),
-              h("div", { className: "font-semibold" }, "Thanks for your rating!"),
-              h("button", { onClick: function () { setJustSubmitted(false); }, className: "mt-4 text-sm text-emerald-400 hover:underline" }, "Leave another")
+              "div", { className: "text-center py-2" },
+              h("div", { className: "text-2xl mb-1" }, "\ud83d\ude4f"),
+              h("div", { className: "font-semibold text-sm" }, "Thanks for your rating!"),
+              h("button", { onClick: function () { setJustSubmitted(false); setRateFormOpen(false); }, className: "mt-3 text-sm text-emerald-400 hover:underline" }, "Leave another")
             )
           : h(
-              "form", { onSubmit: submitRating, className: "space-y-4" },
+              "form", { onSubmit: submitRating, className: "space-y-3" },
               h(
                 "div", { className: "flex items-center justify-center gap-1" },
                 [1, 2, 3, 4, 5].map(function (i) {
@@ -487,7 +504,7 @@
                       onMouseEnter: function () { setHoverStar(i); },
                       onMouseLeave: function () { setHoverStar(0); },
                       onClick: function () { setForm(Object.assign({}, form, { rating: i })); },
-                      className: "text-4xl leading-none transition-transform hover:scale-110",
+                      className: "text-3xl leading-none transition-transform hover:scale-110",
                       style: { color: filled ? "#facc15" : "rgba(255,255,255,0.25)" },
                       "aria-label": i + " star" + (i > 1 ? "s" : "")
                     },
@@ -498,18 +515,26 @@
               h("input", {
                 type: "text", value: form.name, placeholder: "Your name (optional)",
                 onChange: function (e) { setForm(Object.assign({}, form, { name: e.target.value })); },
-                className: "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-white/30"
+                className: "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-white/30"
               }),
               h("textarea", {
-                value: form.comment, placeholder: "Tell us about your trip (optional)", rows: 3,
+                value: form.comment, placeholder: "Tell us about your trip (optional)", rows: 2,
                 onChange: function (e) { setForm(Object.assign({}, form, { comment: e.target.value })); },
-                className: "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-white/30 resize-none"
+                className: "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-white/30 resize-none"
               }),
               error && h("div", { className: "text-red-400 text-xs text-center" }, error),
               h(
-                "button",
-                { type: "submit", disabled: submitting, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] disabled:opacity-60 py-3 rounded-full text-sm font-semibold transition" },
-                submitting ? "Submitting\u2026" : "Submit Rating"
+                "div", { className: "flex gap-2" },
+                h(
+                  "button",
+                  { type: "button", onClick: function () { setRateFormOpen(false); }, className: "px-4 py-2.5 rounded-full text-sm font-medium bg-white/5 border border-white/10 hover:bg-white/10 transition" },
+                  "Cancel"
+                ),
+                h(
+                  "button",
+                  { type: "submit", disabled: submitting, className: "flex-1 bg-[#2E8B57] hover:bg-[#257a4b] disabled:opacity-60 py-2.5 rounded-full text-sm font-semibold transition" },
+                  submitting ? "Submitting\u2026" : "Submit Rating"
+                )
               )
             )
       ),
@@ -555,6 +580,12 @@
   function App() {
     var menuState = useState(false); var mobileMenuOpen = menuState[0], setMobileMenuOpen = menuState[1];
     var pageState = useState("home"); var page = pageState[0], setPage = pageState[1];
+
+    // Which destination card's "Explore Destination" nav popover is
+    // currently open (holds the destination's id, or null). Only one
+    // open at a time — opening another, or tapping the same one again,
+    // closes whichever was open.
+    var destMenuState = useState(null); var openDestMenu = destMenuState[0], setOpenDestMenu = destMenuState[1];
 
     // Tell the site-wide fixed background layer (mounted outside React,
     // see background-system.js) which page is now active, so it can
@@ -763,13 +794,46 @@
         "div", { className: "grid md:grid-cols-2 gap-6" },
         (DEST.items || []).map(function (d) {
           return h(
-            GlassCard, { key: d.id, id: "dest-" + d.id, className: "overflow-hidden flex flex-col" },
+            GlassCard, { key: d.id, id: "dest-" + d.id, className: "overflow-hidden flex flex-col relative" },
             d.image && h("img", { src: d.image, className: "w-full h-[220px] object-cover" }),
             h(
               "div", { className: "p-6 flex flex-col flex-1" },
               h("h3", { className: "text-lg font-semibold" }, d.name),
               h("p", { className: "mt-3 text-white/70 text-sm leading-relaxed flex-1" }, d.description),
-              h("button", { onClick: function () { if (d.link) { window.location.href = d.link; } else { goTo("booking"); } }, className: "mt-6 w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full text-sm font-semibold" }, d.buttonLabel || "Book Now")
+              h(
+                "div", { className: "relative mt-6" },
+                h(
+                  "button",
+                  {
+                    onClick: function () {
+                      if (d.navOptions && d.navOptions.length) {
+                        setOpenDestMenu(openDestMenu === d.id ? null : d.id);
+                      } else if (d.link) {
+                        window.location.href = d.link;
+                      } else {
+                        goTo("booking");
+                      }
+                    },
+                    className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full text-sm font-semibold"
+                  },
+                  d.buttonLabel || "Explore Destination"
+                ),
+                // ---- Small nav popover: pick which page of that site to open ----
+                openDestMenu === d.id && d.navOptions && d.navOptions.length && h(
+                  "div", { className: "absolute left-0 right-0 bottom-full mb-2 rounded-xl overflow-hidden border border-white/15 bg-[#111815] shadow-xl z-10" },
+                  d.navOptions.map(function (opt, i) {
+                    return h(
+                      "button",
+                      {
+                        key: i,
+                        onClick: function () { window.location.href = opt.url; },
+                        className: "w-full text-left px-4 py-3 text-sm hover:bg-white/10 transition" + (i > 0 ? " border-t border-white/10" : "")
+                      },
+                      opt.label
+                    );
+                  })
+                )
+              )
             )
           );
         })

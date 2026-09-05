@@ -735,8 +735,7 @@
         "div",
         {
           className: "fixed md:hidden inset-0 bg-black/50 z-30",
-          onClick: function () { setMobileMenuOpen(false); },
-          style: { backdropFilter: "blur(4px)" }
+          onClick: function () { setMobileMenuOpen(false); }
         }
       ),
       mobileMenuOpen && h(
@@ -800,7 +799,7 @@
         {
           className: "fixed inset-0 bg-black/50 z-40",
           onClick: function () { setOpenDestMenu(null); },
-          style: { pointerEvents: "auto", backdropFilter: "blur(4px)" }
+          style: { pointerEvents: "auto" }
         }
       ),
       h(

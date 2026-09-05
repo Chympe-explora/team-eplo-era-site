@@ -819,15 +819,18 @@
                   d.buttonLabel || "Explore Destination"
                 ),
                 // ---- Small nav popover: pick which page of that site to open ----
+                // Glassmorphism to match every other panel on the site (see
+                // GlassCard above) — frosted, translucent, soft border —
+                // instead of the old flat solid-color dropdown.
                 openDestMenu === d.id && d.navOptions && d.navOptions.length && h(
-                  "div", { className: "absolute left-0 right-0 bottom-full mb-2 rounded-xl overflow-hidden border border-white/15 bg-[#111815] shadow-xl z-10" },
+                  "div", { className: "absolute left-0 right-0 bottom-full mb-2 rounded-2xl overflow-hidden backdrop-blur-[24px] bg-[rgba(255,255,255,0.10)] border border-[rgba(255,255,255,0.18)] shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)] z-10" },
                   d.navOptions.map(function (opt, i) {
                     return h(
                       "button",
                       {
                         key: i,
                         onClick: function () { window.location.href = opt.url; },
-                        className: "w-full text-left px-4 py-3 text-sm hover:bg-white/10 transition" + (i > 0 ? " border-t border-white/10" : "")
+                        className: "w-full text-left px-4 py-3.5 text-base md:text-lg font-semibold text-white hover:bg-white/15 transition" + (i > 0 ? " border-t border-white/15" : "")
                       },
                       opt.label
                     );
@@ -957,7 +960,7 @@
 
     // ---- Footer -------------------------------------------------------
     var footer = h(
-      "footer", { className: "pt-6 relative" },
+      "footer", { id: "footer", className: "pt-6 relative scroll-mt-24" },
       h(SectionBG, { section: "footer" }),
       h(
         GlassCard, { className: "p-8 md:p-10" },

@@ -472,6 +472,60 @@
 
   function money(n) { return "₹" + Number(n || 0).toLocaleString("en-IN"); }
 
+  // Reads the admin's "🏷️ Put a package on sale" setting — set from the
+  // Telegram bot's Discounts & Sales menu, fetched once into
+  // window.KC_DISCOUNTS by live-content.js — for this site + package
+  // key. Returns a whole-number percent, or 0 if no sale is running.
+  function getSalePercent(pkgKey) {
+    var d = window.KC_DISCOUNTS, site = window.KC_SITE_ID;
+    var pct = d && d.saleBySite && site && d.saleBySite[site] && d.saleBySite[site][pkgKey];
+    return typeof pct === "number" && pct > 0 ? pct : 0;
+  }
+
+  // A package card's price block. With no sale running it just shows
+  // the plain price (unchanged look). Once the admin puts that package
+  // on sale, it shows the original price struck through, the new
+  // discounted price, and a badge with the exact ₹ savings — all
+  // computed live from the sale %, so nothing needs to be typed twice.
+  function PriceBlock(props) {
+    var pct = getSalePercent(props.pkgKey);
+    if (!pct) {
+      return h(
+        "div", { className: "text-right" },
+        h("div", { className: "text-xl font-bold" }, money(props.price)),
+        h("div", { className: "text-[11px] text-white/50" }, props.unit)
+      );
+    }
+    var discounted = Math.round(props.price * (1 - pct / 100));
+    var savings = props.price - discounted;
+    return h(
+      "div", { className: "text-right" },
+      h(
+        "div", { className: "flex items-center gap-2 justify-end flex-wrap" },
+        h("span", { className: "text-xs text-white/40 line-through" }, money(props.price)),
+        h("span", { className: "text-xl font-bold text-emerald-400" }, money(discounted))
+      ),
+      h("div", { className: "text-[11px] text-white/50" }, props.unit),
+      h(
+        "div", { className: "mt-1.5 inline-block px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold whitespace-nowrap" },
+        "🏷️ " + pct + "% OFF · Save " + money(savings)
+      )
+    );
+  }
+
+  // For packages with no single headline price (e.g. the fully-
+  // customizable Private Package), a sale still needs to be visible —
+  // just as a plain "X% OFF" ribbon next to the package badge, since
+  // there's no one ₹ figure to discount here.
+  function SaleRibbon(props) {
+    var pct = getSalePercent(props.pkgKey);
+    if (!pct) return null;
+    return h(
+      "div", { className: "absolute top-4 right-4 px-3 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-bold shadow-lg" },
+      "🏷️ " + pct + "% OFF"
+    );
+  }
+
   // A small auto-sliding photo strip. Give it a list of image file names
   // via the "images" prop (e.g. from a highlight's images: [...] list in
   // config.js) and it slides to the next one every few seconds. Shows
@@ -668,6 +722,18 @@
     // ever tearing down and restarting the <video> element itself.
     useEffect(function () {
       if (window.KCBackgrounds) window.KCBackgrounds.setPage(String(page));
+    }, [page]);
+
+    // Deep-link scroll: lets an external link (e.g. the ERA AI chat
+    // widget's "📍 Take me there" button, or a link from the hub site)
+    // land on an exact section via "?page=N#section-id" — not just the
+    // right page. Runs after every page change since the target section
+    // only exists in the DOM once its page has actually mounted.
+    useEffect(function () {
+      var hashId = window.location.hash ? window.location.hash.slice(1) : "";
+      if (!hashId) return;
+      var timer = setTimeout(function () { scrollToId(hashId); }, 60);
+      return function () { clearTimeout(timer); };
     }, [page]);
     var pkgState = useState(null); var pkg = pkgState[0], setPkg = pkgState[1];
     var menuState = useState(false); var mobileMenuOpen = menuState[0], setMobileMenuOpen = menuState[1];
@@ -1510,7 +1576,7 @@
         h(
           "div", { className: "flex justify-between items-start" },
           h("h3", { className: "text-xl font-semibold" }, PKG.sharedTour.name),
-          h("div", { className: "text-right" }, h("div", { className: "text-xl font-bold" }, money(PRICES.sharedTour.perPerson)), h("div", { className: "text-[11px] text-white/50" }, PKG.sharedTour.priceUnit))
+          h(PriceBlock, { price: PRICES.sharedTour.perPerson, unit: PKG.sharedTour.priceUnit, pkgKey: "sharedTour" })
         ),
         h(
           "ul", { className: "mt-4 space-y-2 text-[13px] text-white/70" },
@@ -1530,6 +1596,7 @@
         "div", { className: "relative h-[220px] overflow-hidden" },
         h("img", { src: CONTENT.sectionImages.privatePackageCard, className: "w-full h-full object-cover group-hover:scale-105 transition duration-700" }),
         h("div", { className: "absolute top-4 left-4 px-3 py-1 rounded-full bg-black/40 backdrop-blur text-xs border border-white/10" }, PKG.privatePackage.badge),
+        h(SaleRibbon, { pkgKey: "privatePackage" }),
         h("div", { className: "absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/70 to-transparent" })
       ),
       h(

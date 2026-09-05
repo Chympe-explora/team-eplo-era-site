@@ -50,6 +50,12 @@
        the site still renders fine without it. -->
   <script src="background-system.js"></script>
 
+  <!-- Per-page/per-section font size & color overrides, set from
+       Telegram Admin (🔤 Fonts & Colors). Reads
+       window.KC_CONTENT.sectionStyles[key].typography — safe to
+       remove, the site still renders fine with its normal styling. -->
+  <script src="typography-system.js"></script>
+
   <!-- Tailwind CSS (JIT engine loaded live from the CDN) — generates every
        utility class app.js uses, on the fly, so no class is ever missing
        no matter what markup/content changes are made later. -->

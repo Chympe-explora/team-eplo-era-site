@@ -1,85 +1,121 @@
 /* ============================================================
-   typography-system.js — admin-editable heading/body text colors,
-   site-wide and (on sites that support it) per-section.
+   typography-system.js — per-page/per-section font SIZE and COLOR
+   overrides, set from the Telegram Admin (🔤 Fonts & Colors).
 
-   Scope, on purpose: this only overrides the light-on-dark text
-   utility classes used for content sitting over the background video
-   (text-white and its /NN opacity variants — "text-white/80" etc).
-   It deliberately leaves text-gray-900/700/600 etc. alone, since
-   those are used for dark-on-light surfaces (the notice popup,
-   buttons, form fields) where "site typography" doesn't apply and
-   swapping them would break contrast/readability there.
+   Config lives at window.KC_CONTENT.sectionStyles[key].typography
+   (same "sectionStyles" object background-system.js already reads
+   for background/overlay/glass per section — see config.js). Each
+   entry looks like:
 
-   Config lives at window.KC_CONTENT.typography (global) and, where a
-   section has a stable DOM id to scope to, window.KC_CONTENT
-   .sectionStyles[key].typography (per-section override) — set in
-   config.js and overridable per-site from Telegram Admin (via
-   live-content.js, which has already run by the time this executes —
-   see index.html's script order: config.js → live-content.js →
-   background-system.js → typography-system.js → app.js).
+     { headingSize: "2.5rem", headingColor: "#ffcc00",
+       bodySize: "1rem",      bodyColor: "" }
 
-   If this fails for any reason, it fails silently and the site just
-   shows its normal hard-coded text colors — nothing ever breaks
-   because of this file.
+   An empty string means "leave that alone" — the page's normal
+   Tailwind classes keep controlling it, so a partially-configured
+   entry never breaks anything.
+
+   HOW IT APPLIES: rather than touching every heading/paragraph
+   element individually (which would mean hunting down every h1–h5,
+   p, span and li across every page, in three separate app.js
+   files), this injects ONE <style> tag with selectors scoped to
+   each page/section's own container and !important, the same way a
+   no-code site builder's "custom CSS" panel works. That container is:
+     - the numbered pages ("1".."7") in krem-chympe/wilderness-expedition
+       → selected via the data-kc-page="N" attribute added to that
+         page's <main> wrapper (see app.js)
+     - the named sections on the root site ("hero", "about", ...)
+       → selected via that section's own existing id="..." (already
+         present on every <section>/<footer> wrapper in app.js)
+
+   Load order: config.js → live-content.js → background-system.js →
+   typography-system.js → app.js. live-content.js's fetch is
+   synchronous on purpose (see its own header comment) specifically
+   so every script after it already sees the admin's saved overrides
+   — so a single apply() at load time is enough; no event/listener
+   needed.
+
+   A bad/missing value never breaks the page — it just means that
+   one rule is skipped and the normal styling shows through.
    ============================================================ */
 (function () {
   "use strict";
 
-  // Section ids this site actually renders with a matching DOM id —
-  // only these get a per-section override rule. (Root's named
-  // sections match 1:1; the numbered-page sites don't expose a stable
-  // per-page DOM id yet, so they only get the global colors below.)
-  var SCOPABLE_SECTIONS = ["hero", "home", "destinations", "experiences", "booking", "about", "ratings", "footer"];
-
-  // The exact opacity variants used across app.js for secondary/muted
-  // text — kept as real opacity steps (not one flat body color) so
-  // "80% white" stays visibly lighter than "60% white" after an admin
-  // sets a custom body color, same relationship as the defaults.
-  var OPACITY_STEPS = [90, 80, 75, 70, 60, 50, 40, 30, 25];
-
-  function esc(s) {
-    return String(s || "").replace(/[^#a-zA-Z0-9(),.%\s\/-]/g, "");
+  function styleTag() {
+    var el = document.getElementById("kc-typography-overrides");
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "kc-typography-overrides";
+      document.head.appendChild(el);
+    }
+    return el;
   }
 
-  function rule(selectorPrefix, heading, body) {
+  // Only accept values that can't be used to break out of the
+  // stylesheet (no admin-typed value ever reaches raw CSS unescaped
+  // otherwise). Sizes: plain numbers/units. Colors: hex, rgb()/rgba(),
+  // or a plain CSS color keyword — nothing else.
+  function safeSize(v) {
+    if (typeof v !== "string") return "";
+    v = v.trim();
+    return /^[0-9]{1,4}(\.[0-9]{1,3})?(px|rem|em|%)$/.test(v) ? v : "";
+  }
+  function safeColor(v) {
+    if (typeof v !== "string") return "";
+    v = v.trim();
+    if (/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(v)) return v;
+    if (/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+)\s*)?\)$/.test(v)) return v;
+    if (/^[a-zA-Z]{3,20}$/.test(v)) return v; // e.g. "white", "gold"
+    return "";
+  }
+
+  function ruleFor(selectorPrefix, typo) {
+    if (!typo) return "";
+    var headingSize = safeSize(typo.headingSize);
+    var headingColor = safeColor(typo.headingColor);
+    var bodySize = safeSize(typo.bodySize);
+    var bodyColor = safeColor(typo.bodyColor);
+
     var css = "";
-    if (heading) css += selectorPrefix + ".text-white{color:" + esc(heading) + " !important;}\n";
-    if (body) {
-      OPACITY_STEPS.forEach(function (pct) {
-        css += selectorPrefix + ".text-white\\/" + pct + "{color:color-mix(in srgb," + esc(body) + " " + pct + "%,transparent) !important;}\n";
-      });
-      // The bare (100%) muted case some elements use directly as body copy.
-      css += selectorPrefix + ".text-white\\/95{color:color-mix(in srgb," + esc(body) + " 95%,transparent) !important;}\n";
+    var hDecls = [];
+    if (headingSize) hDecls.push("font-size:" + headingSize + " !important");
+    if (headingColor) hDecls.push("color:" + headingColor + " !important");
+    if (hDecls.length) {
+      css += selectorPrefix + " h1, " + selectorPrefix + " h2, " + selectorPrefix + " h3, " +
+             selectorPrefix + " h4, " + selectorPrefix + " h5 { " + hDecls.join(";") + "; }\n";
+    }
+
+    var bDecls = [];
+    if (bodySize) bDecls.push("font-size:" + bodySize + " !important");
+    if (bodyColor) bDecls.push("color:" + bodyColor + " !important");
+    if (bDecls.length) {
+      css += selectorPrefix + " p, " + selectorPrefix + " li, " + selectorPrefix + " span, " +
+             selectorPrefix + " a { " + bDecls.join(";") + "; }\n";
     }
     return css;
   }
 
   function apply() {
-    var CONTENT = window.KC_CONTENT || {};
-    var typo = CONTENT.typography || {};
-    var css = rule("", typo.headingColor, typo.bodyColor);
-
-    var sectionStyles = CONTENT.sectionStyles || {};
-    SCOPABLE_SECTIONS.forEach(function (key) {
-      var t = sectionStyles[key] && sectionStyles[key].typography;
-      if (!t || (!t.headingColor && !t.bodyColor)) return;
-      css += rule("#" + key + " ", t.headingColor, t.bodyColor);
-    });
-
-    if (!css) return;
-
-    var tag = document.getElementById("kc-typography");
-    if (!tag) {
-      tag = document.createElement("style");
-      tag.id = "kc-typography";
-      document.head.appendChild(tag);
+    try {
+      var CONTENT = window.KC_CONTENT || {};
+      var styles = CONTENT.sectionStyles || {};
+      var css = "";
+      Object.keys(styles).forEach(function (key) {
+        var typo = styles[key] && styles[key].typography;
+        if (!typo) return;
+        // Numbered keys ("1".."7") are whole pages (krem-chympe /
+        // wilderness-expedition) — the root site's named keys
+        // ("hero", "about", ...) already match that section's own
+        // element id, no separate attribute needed there.
+        var selector = /^[0-9]+$/.test(key) ? '[data-kc-page="' + key + '"]' : "#" + key;
+        css += ruleFor(selector, typo);
+      });
+      styleTag().textContent = css;
+    } catch (e) {
+      // A bad config value should never take the whole page down.
+      console.warn("Typography system: failed to apply config, skipping.", e);
     }
-    tag.textContent = css;
   }
 
-  try {
-    apply();
-  } catch (e) {
-    console.warn("Typography system: failed to apply config, skipping.", e);
-  }
+  window.KCTypography = { apply: apply };
+  apply();
 })();

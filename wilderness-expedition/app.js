@@ -389,7 +389,7 @@
           "button",
           {
             onClick: props.onDiscover,
-            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-6 md:pb-3 text-white/90 hover:text-white transition",
+            className: "flex-shrink-0 mx-auto flex flex-col items-center gap-0.5 pb-12 md:pb-6 text-white/90 hover:text-white transition",
             style: { marginBottom: "env(safe-area-inset-bottom, 0px)" }
           },
           h("span", { className: "text-[13px] md:text-sm tracking-[0.2em] font-medium" }, hero.discoverLabel || "Discover"),
@@ -646,7 +646,16 @@
   // Root App
   // ---------------------------------------------------------------------
   function App() {
-    var pageState = useState(1); var page = pageState[0], setPage = pageState[1];
+    // Lets an external link jump straight to a specific page —
+    // e.g. root site's destination card can link to
+    // "wilderness-expedition/index.html?page=3" to open the booking
+    // form directly. Falls back to Home (1) for anything missing/out
+    // of range.
+    var pageState = useState(function () {
+      var n = parseInt(new URLSearchParams(window.location.search).get("page"), 10);
+      return n >= 1 && n <= 7 ? n : 1;
+    });
+    var page = pageState[0], setPage = pageState[1];
 
     // Every "Book Now" button in the header/hero/CTAs jumps to this
     // page by default (2 = package selection) — admin-editable via
@@ -955,6 +964,10 @@
       window.KCBridge.submitBooking({
         name: contact.name, whatsapp: contact.whatsapp, date: contact.date,
         specialRequest: contact.specialRequest, package: packageLabelForDraft(),
+        // Raw package key (not the human label above) — this is what
+        // the backend matches against a guide's assigned services for
+        // random assignment. See guides.js on the backend.
+        packageKey: pkg,
         reference: visitorCodeRef.current, advance: advance, total: grandTotal, balance: balanceLeft,
         paymentMethod: payTab === "qr" ? "QR Code" : payTab === "upi" ? "UPI" : "Bank Transfer",
         // Full pretty-formatted text (ref no, itemized breakdown, totals —

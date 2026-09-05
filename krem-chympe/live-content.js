@@ -59,6 +59,13 @@
     window.KC_PRICES = deepMerge(window.KC_PRICES, pricesRes.prices);
   }
 
+  // ---- discounts (the admin's "🏷️ Put a package on sale" setting) ----
+  // Exposed as window.KC_DISCOUNTS = { codes, bulkTiers, seasonal,
+  // saleBySite }. Package cards in app.js read saleBySite[SITE][pkgKey]
+  // to show the struck-through price + savings badge.
+  var discountsRes = getJSON("/api/discounts?site=" + SITE);
+  window.KC_DISCOUNTS = (discountsRes && discountsRes.discounts) || null;
+
   // ---- images (only keys the admin has actually changed) ----
   // config.js copies each KC_IMAGES filename into KC_CONTENT by value
   // at parse time (e.g. destinations.items[0].image = KC_IMAGES.card),

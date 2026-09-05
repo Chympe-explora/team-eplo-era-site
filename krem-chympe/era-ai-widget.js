@@ -62,6 +62,75 @@
 
   const GREETING = "Hi 👋 Send us a message here and a real person on our team will reply to you right in this chat.";
 
+  // =====================================================================
+  // 🧭 NAV HELP — "where do I find X on this site" questions, answered
+  // instantly and entirely client-side (no network round-trip, never
+  // forwarded to Telegram). Two ways in:
+  //   1. Tap one of the ready-made questions shown when the chat opens
+  //      (or via the "🧭 Where can I find...?" toggle).
+  //   2. Type a navigation question normally — matchNavHelp() below
+  //      checks it against this list first, before falling back to the
+  //      normal human/AI chat flow, so typing "where's the gallery" gets
+  //      the same instant answer as tapping it would.
+  // Every answer names the exact section/page and offers a one-tap
+  // "📍 Take me there" button. Add more entries here any time — no admin
+  // bot round-trip needed since this is just page navigation, not
+  // content that changes.
+  // =====================================================================
+  const NAV_HELP = {
+    root: [
+      { q: "Where do I see your destinations?", kw: "destination destinations trips places locations see view krem chympe wilderness expedition", a: "That's the <b>Destinations</b> section on this page — Krem Chympe Falls & Caves and Wilderness Expedition are both listed there. Tap \u201cExplore Destination\u201d on either card to open that trip's own site.", href: "#destinations" },
+      { q: "Where do I actually book a trip?", kw: "book booking reserve reservation how do i book", a: "Booking happens on each destination's own site. In the <b>Destinations</b> section, tap \u201cExplore Destination\u201d on Krem Chympe or Wilderness Expedition, then pick a package there.", href: "#destinations" },
+      { q: "Where can I read about what a trip includes?", kw: "experience included what happens itinerary details activities", a: "That's the <b>The Experience</b> section on this page.", href: "#experiences" },
+      { q: "Why should I book with you?", kw: "why book us trust safe safety reasons choose", a: "See the <b>Why Book Us</b> section on this page — safety, local guides, what makes us different.", href: "#booking" },
+      { q: "Where can I learn about your company?", kw: "about us who are you company team story", a: "That's the <b>About Us</b> section further down this page.", href: "#about" },
+      { q: "How do I contact you?", kw: "contact phone number email whatsapp reach call", a: "Scroll to the very bottom of this page — the footer has our phone, email and social links.", href: "#footer" },
+      { q: "Where's your refund policy?", kw: "refund policy cancel cancellation", a: "Tap <b>Refund Policy</b> in the footer at the bottom of this page.", href: "#footer" }
+    ],
+    "krem-chympe": [
+      { q: "Where do I see packages and prices?", kw: "package packages price prices pricing cost how much", a: "That's the <b>Packages</b> page — I can take you straight there.", href: "index.html?page=2#kc-packages" },
+      { q: "Where's the photo gallery?", kw: "photo photos gallery pictures images", a: "That's the <b>Gallery</b> section on the Home page.", href: "index.html?page=1#kc-gallery" },
+      { q: "Where can I read the full story about Krem Chympe?", kw: "story about explore what is krem chympe waterfall cave", a: "That's the <b>Explore</b> section on the Home page.", href: "index.html?page=1#kc-explore" },
+      { q: "How do I contact you / get your phone number?", kw: "contact phone number whatsapp email reach call", a: "That's the <b>Contact</b> section at the bottom of the Home page.", href: "index.html?page=1#kc-contact" },
+      { q: "Where do I book the Shared Package?", kw: "shared package book booking group tour", a: "Go to the <b>Packages</b> page and tap \u201cBook Now\u201d on the Shared Package card.", href: "index.html?page=2#kc-packages" },
+      { q: "Where do I book the Private Package?", kw: "private package book booking custom camping jeep", a: "Go to the <b>Packages</b> page and tap \u201cBook Now\u201d on the Private Package card.", href: "index.html?page=2#kc-packages" },
+      { q: "Where's the refund policy?", kw: "refund policy cancel cancellation", a: "Tap <b>Refund Policy</b> in the footer on the Home page.", href: "index.html?page=1#kc-contact" },
+      { q: "Where's the Wilderness Expedition site?", kw: "wilderness expedition other site trek", a: "That's a separate destination site — go to the main hub page and tap \u201cExplore Destination\u201d on Wilderness Expedition.", href: "../index.html#destinations" }
+    ],
+    "wilderness-expedition": [
+      { q: "Where do I see packages and prices?", kw: "package packages price prices pricing cost how much expedition", a: "That's the <b>Packages</b> page — I can take you straight there.", href: "index.html?page=2#kc-packages" },
+      { q: "Where's the photo gallery?", kw: "photo photos gallery pictures images", a: "That's the <b>Gallery</b> section on the Home page.", href: "index.html?page=1#kc-gallery" },
+      { q: "Where can I read the full story about the expedition?", kw: "story about explore what is wilderness expedition trek route", a: "That's the <b>Explore</b> section on the Home page.", href: "index.html?page=1#kc-explore" },
+      { q: "How do I contact you / get your phone number?", kw: "contact phone number whatsapp email reach call", a: "That's the <b>Contact</b> section at the bottom of the Home page.", href: "index.html?page=1#kc-contact" },
+      { q: "Where do I book the Expedition Package?", kw: "book booking expedition package", a: "Go to the <b>Packages</b> page and tap \u201cBook Now\u201d on the Expedition Package card.", href: "index.html?page=2#kc-packages" },
+      { q: "Where's the refund policy?", kw: "refund policy cancel cancellation", a: "Tap <b>Refund Policy</b> in the footer on the Home page.", href: "index.html?page=1#kc-contact" },
+      { q: "Where's the Krem Chympe site?", kw: "krem chympe other site cave waterfall", a: "That's a separate destination — go to the main hub page and tap \u201cExplore Destination\u201d on Krem Chympe.", href: "../index.html#destinations" }
+    ]
+  };
+
+  function navTokenize(s) {
+    return (s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+  }
+
+  // Matches typed free text against the current site's NAV_HELP list by
+  // simple keyword overlap (same approach as the backend KB, kept tiny
+  // and local on purpose — this never needs to learn or grow, it's just
+  // page navigation). Returns the best entry, or null if nothing clears
+  // the confidence bar.
+  function matchNavHelp(text) {
+    const list = NAV_HELP[SITE_ID] || [];
+    const queryTokens = navTokenize(text);
+    if (!queryTokens.length) return null;
+    let best = null, bestScore = 0;
+    for (const entry of list) {
+      const bag = new Set(navTokenize(entry.q + " " + (entry.kw || "")));
+      const matched = queryTokens.filter((t) => bag.has(t));
+      const score = matched.length / queryTokens.length;
+      if (score > bestScore) { bestScore = score; best = entry; }
+    }
+    return bestScore >= 0.5 ? best : null;
+  }
+
   const style = document.createElement("style");
   style.textContent = `
     #era-ai-bubble{position:fixed;right:16px;bottom:88px;z-index:45;width:56px;height:56px;border-radius:9999px;
@@ -91,6 +160,20 @@
     .era-msg.typing .era-dot:nth-child(2){animation-delay:.15s;}
     .era-msg.typing .era-dot:nth-child(3){animation-delay:.3s;}
     @keyframes era-typing-bounce{0%,60%,100%{transform:translateY(0);opacity:.5;}30%{transform:translateY(-4px);opacity:1;}}
+    #era-nav-bar{padding:8px 12px;border-top:1px solid rgba(255,255,255,0.1);flex-shrink:0;}
+    #era-nav-toggle{width:100%;background:rgba(46,139,87,0.16);border:1px solid rgba(46,139,87,0.4);
+      color:#a8ffcf;font:600 12px/1 "Inter",sans-serif;padding:9px 12px;border-radius:9999px;cursor:pointer;
+      transition:background .15s ease;}
+    #era-nav-toggle:hover{background:rgba(46,139,87,0.28);}
+    .era-nav-chips{display:flex;flex-direction:column;gap:6px;align-self:stretch;
+      background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:8px;}
+    .era-nav-chip{text-align:left;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+      color:#fff;font:500 12px/1.4 "Inter",sans-serif;padding:8px 10px;border-radius:10px;cursor:pointer;
+      transition:background .15s ease;}
+    .era-nav-chip:hover{background:rgba(255,255,255,0.14);}
+    .era-goto-btn{margin-top:8px;background:#2E8B57;border:none;color:#fff;font:600 11.5px/1 "Inter",sans-serif;
+      padding:8px 12px;border-radius:9999px;cursor:pointer;}
+    .era-goto-btn:hover{background:#257a4b;}
     #era-ai-form{display:flex;gap:8px;padding:10px 12px;border-top:1px solid rgba(255,255,255,0.1);}
     #era-ai-input{flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);
       border-radius:9999px;padding:8px 14px;color:#fff;font-size:12.5px;outline:none;}
@@ -114,6 +197,9 @@
       <button id="era-ai-close" aria-label="Close chat">✕</button>
     </div>
     <div id="era-ai-body"></div>
+    <div id="era-nav-bar">
+      <button id="era-nav-toggle" type="button">🧭 Where can I find...?</button>
+    </div>
     <form id="era-ai-form">
       <input id="era-ai-input" type="text" autocomplete="off" placeholder="Type a message…" />
       <button id="era-ai-send" type="submit" aria-label="Send">➤</button>
@@ -146,6 +232,7 @@
     const input = panel.querySelector("#era-ai-input");
     const send = panel.querySelector("#era-ai-send");
     const closeBtn = panel.querySelector("#era-ai-close");
+    const navToggle = panel.querySelector("#era-nav-toggle");
 
     // ===== Live "…is typing" bubble in the admin's Telegram, WhatsApp-
     // style, while the visitor is composing a message (before they hit
@@ -176,6 +263,76 @@
       body.scrollTop = body.scrollHeight;
       return el;
     }
+
+    // Jumps to a nav-help target: a plain "#id" scrolls smoothly if that
+    // section already exists on the current page (true on the hub site,
+    // and true on a sub-site when the target section is on whichever
+    // page is currently showing); anything else (a relative URL, or a
+    // "#id" that isn't in the current DOM because it lives on a
+    // different numbered page) does a real navigation — the small
+    // deep-link effect added to each sub-site's app.js then finishes the
+    // job by scrolling to the hash once that page has mounted.
+    function goToPlace(href) {
+      if (href.charAt(0) === "#") {
+        const el = document.getElementById(href.slice(1));
+        if (el) {
+          const header = document.querySelector("header");
+          const headerH = header ? header.getBoundingClientRect().height : 0;
+          const y = el.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
+          window.scrollTo({ top: Math.max(y, 0), behavior: "smooth" });
+          closePanel();
+          return;
+        }
+      }
+      window.location.href = href;
+    }
+
+    function addNavAnswer(entry) {
+      const el = document.createElement("div");
+      el.className = "era-msg bot";
+      el.innerHTML = entry.a + (entry.href ? '<br><button type="button" class="era-goto-btn">📍 Take me there</button>' : "");
+      body.appendChild(el);
+      body.scrollTop = body.scrollHeight;
+      if (entry.href) {
+        el.querySelector(".era-goto-btn").addEventListener("click", function () { goToPlace(entry.href); });
+      }
+    }
+
+    function renderNavChips() {
+      const wrap = document.createElement("div");
+      wrap.className = "era-nav-chips";
+      (NAV_HELP[SITE_ID] || []).forEach(function (entry) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "era-nav-chip";
+        chip.textContent = entry.q;
+        chip.addEventListener("click", function () {
+          addMessage(entry.q, "user");
+          addNavAnswer(entry);
+        });
+        wrap.appendChild(chip);
+      });
+      return wrap;
+    }
+
+    let navOpen = false;
+    let navBlock = null;
+    function showNavChips() {
+      if (navBlock) return;
+      navBlock = renderNavChips();
+      body.appendChild(navBlock);
+      body.scrollTop = body.scrollHeight;
+      navOpen = true;
+      navToggle.textContent = "✕ Hide questions";
+    }
+    function hideNavChips() {
+      if (navBlock) { navBlock.remove(); navBlock = null; }
+      navOpen = false;
+      navToggle.textContent = "🧭 Where can I find...?";
+    }
+    navToggle.addEventListener("click", function () {
+      if (navOpen) hideNavChips(); else showNavChips();
+    });
 
     // ===== Persistent "waiting for a reply" bubble =====
     // Shows an animated three-dot bubble (the same visual idiom WhatsApp
@@ -276,7 +433,10 @@
     function openPanel() {
       panel.classList.add("open");
       opened = true;
-      if (!body.childElementCount) addMessage(GREETING, "bot");
+      if (!body.childElementCount) {
+        addMessage(GREETING, "bot");
+        showNavChips(); // surface the navigation FAQ right away, nothing to tap first
+      }
       setTimeout(() => input.focus(), 150);
       startPolling();
     }
@@ -298,6 +458,18 @@
       if (!text) return;
       addMessage(text, "user");
       input.value = "";
+
+      // Typed navigation questions ("where's the gallery", "how do I
+      // book") get the same instant local answer as tapping a chip
+      // would — no network call, nothing forwarded to Telegram, since
+      // this is just page navigation, not something a human needs to
+      // field.
+      const navMatch = matchNavHelp(text);
+      if (navMatch) {
+        addNavAnswer(navMatch);
+        return;
+      }
+
       send.disabled = true;
       
       // ===== FIX #2: Track message time and update polling =====

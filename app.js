@@ -730,16 +730,25 @@
           h("button", { onClick: function () { setMobileMenuOpen(!mobileMenuOpen); }, className: "md:hidden w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center" }, mobileMenuOpen ? h(X, { size: 18 }) : h(Menu, { size: 18 }))
         )
       ),
+      // Mobile menu backdrop - blocks interaction with content behind when menu is open
       mobileMenuOpen && h(
-        GlassCard, { className: "md:hidden mt-3 p-4 max-w-[1280px] mx-auto space-y-2" },
+        "div",
+        {
+          className: "fixed md:hidden inset-0 bg-black/50 z-30",
+          onClick: function () { setMobileMenuOpen(false); },
+          style: { backdropFilter: "blur(4px)" }
+        }
+      ),
+      mobileMenuOpen && h(
+        GlassCard, { className: "md:hidden mt-3 p-4 max-w-[1280px] mx-auto space-y-2 relative z-40" },
         navItems.map(function (item) {
           return h("button", {
             key: item.target || item.id || item.label,
             onClick: function () { navigateTo(item); },
-            className: "w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
+            className: "w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition"
           }, item.label);
         }),
-        h("button", { onClick: function () { navigateTo(HEADER_CTA); }, className: "w-full bg-[#2E8B57] py-3 rounded-full font-medium" }, HEADER_CTA.label || "Book Now")
+        h("button", { onClick: function () { navigateTo(HEADER_CTA); setMobileMenuOpen(false); }, className: "w-full bg-[#2E8B57] hover:bg-[#257a4b] py-3 rounded-full font-medium transition" }, HEADER_CTA.label || "Book Now")
       )
     );
 
@@ -785,6 +794,15 @@
     var destinations = h(
       "section", { id: "destinations", className: "scroll-mt-24 relative" },
       h(SectionBG, { section: "destinations" }),
+      // Modal backdrop when destination nav menu is open - blocks interaction with content behind
+      openDestMenu && h(
+        "div",
+        {
+          className: "fixed inset-0 bg-black/50 z-40",
+          onClick: function () { setOpenDestMenu(null); },
+          style: { pointerEvents: "auto", backdropFilter: "blur(4px)" }
+        }
+      ),
       h(
         "div", { className: "mb-4 md:mb-6" },
         h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight" }, DEST.title),
@@ -822,8 +840,9 @@
                 // Glassmorphism to match every other panel on the site (see
                 // GlassCard above) — frosted, translucent, soft border —
                 // instead of the old flat solid-color dropdown.
+                // Modal backdrop with z-40 blocks interaction, popover z-50 stays on top
                 openDestMenu === d.id && d.navOptions && d.navOptions.length && h(
-                  "div", { className: "absolute left-0 right-0 bottom-full mb-2 rounded-2xl overflow-hidden backdrop-blur-[24px] bg-[rgba(255,255,255,0.10)] border border-[rgba(255,255,255,0.18)] shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)] z-10" },
+                  "div", { className: "absolute left-0 right-0 bottom-full mb-2 rounded-2xl overflow-hidden backdrop-blur-[24px] bg-[rgba(255,255,255,0.10)] border border-[rgba(255,255,255,0.18)] shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)] z-50" },
                   d.navOptions.map(function (opt, i) {
                     return h(
                       "button",

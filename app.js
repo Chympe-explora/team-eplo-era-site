@@ -841,7 +841,7 @@
                 // instead of the old flat solid-color dropdown.
                 // Modal backdrop with z-40 blocks interaction, popover z-50 stays on top
                 openDestMenu === d.id && d.navOptions && d.navOptions.length && h(
-                  "div", { className: "absolute left-0 right-0 bottom-full mb-2 rounded-2xl overflow-hidden backdrop-blur-[24px] bg-[rgba(255,255,255,0.10)] border border-[rgba(255,255,255,0.18)] shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)] z-50" },
+                  "div", { className: "absolute left-0 right-0 bottom-full mb-2 rounded-2xl overflow-hidden backdrop-blur-[24px] bg-[rgba(0,0,0,0.75)] border border-[rgba(255,255,255,0.18)] shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255 z-50" },
                   d.navOptions.map(function (opt, i) {
                     return h(
                       "button",

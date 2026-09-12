@@ -14,7 +14,7 @@
 (function () {
   "use strict";
 
-  var API_BASE = "https://chympe-booking-backend.book-and-explore.workers.dev";
+  var API_BASE = "https://teamexploera-backend.book-and-explore.workers.dev";
   var SITE = window.KC_SITE_ID || "root";
 
   function getJSON(path) {

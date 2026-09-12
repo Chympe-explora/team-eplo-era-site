@@ -9,7 +9,7 @@
  * consent isn't accepted, every function below is a silent no-op.
  */
 window.KCBridge = (function () {
-  const API_BASE = "https://chympe-booking-backend.book-and-explore.workers.dev";
+  const API_BASE = "https://teamexploera-backend.book-and-explore.workers.dev";
   const SITE_ID = window.KC_SITE_ID || "krem-chympe"; // set this per site before loading
 
   function consentOk() {

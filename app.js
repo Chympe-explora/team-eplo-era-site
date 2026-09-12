@@ -515,7 +515,7 @@
   }
 
   function RatingsSection() {
-    var API_BASE = "https://chympe-booking-backend.book-and-explore.workers.dev";
+    var API_BASE = "https://teamexploera-backend.book-and-explore.workers.dev";
     var siteId = window.KC_SITE_ID || "root";
 
     var dataState = useState(null); var ratingsData = dataState[0], setRatingsData = dataState[1];

@@ -36,9 +36,54 @@
     return null;
   }
 
+  // A "block array" is what experiences.blocks / about.blocks are made
+  // of — ordered lists of { type: "heading"|"paragraph"|"image"|... }.
+  // Telegram text edits round-trip the WHOLE array back to the backend,
+  // so an edit made before an "image" block existed (or a bot bug that
+  // only understands text blocks) can silently save a copy with the
+  // image blocks missing — and every visitor then gets that copy
+  // instead of the real config.js content. This guards against that:
+  // any "image" block present in the static config.js defaults but
+  // missing from the backend's version is spliced back in, so a
+  // content edit can only ever ADD/CHANGE text, never delete a photo
+  // it didn't touch.
+  function looksLikeBlockArray(arr) {
+    return arr.length > 0 && arr.every(function (b) {
+      return b && typeof b === "object" && typeof b.type === "string";
+    });
+  }
+
+  function restoreMissingImageBlocks(baseArr, overrideArr) {
+    if (!looksLikeBlockArray(baseArr) || !looksLikeBlockArray(overrideArr)) return overrideArr;
+    var baseImages = baseArr.filter(function (b) { return b.type === "image"; });
+    if (!baseImages.length) return overrideArr;
+    var overrideKeys = {};
+    overrideArr.forEach(function (b) { if (b.type === "image") overrideKeys[b.key] = true; });
+    var missing = baseImages.filter(function (b) { return !overrideKeys[b.key]; });
+    if (!missing.length) return overrideArr;
+    var result = overrideArr.slice();
+    missing.forEach(function (imgBlock) {
+      var idxInBase = baseArr.indexOf(imgBlock);
+      var precedingBase = idxInBase > 0 ? baseArr[idxInBase - 1] : null;
+      var insertAt = result.length;
+      if (precedingBase) {
+        for (var i = 0; i < result.length; i++) {
+          if (result[i].type === precedingBase.type && result[i].text === precedingBase.text) {
+            insertAt = i + 1;
+            break;
+          }
+        }
+      }
+      result.splice(insertAt, 0, imgBlock);
+    });
+    return result;
+  }
+
   function deepMerge(base, override) {
     if (override === undefined || override === null) return base;
-    if (Array.isArray(override)) return override;
+    if (Array.isArray(override)) {
+      return Array.isArray(base) ? restoreMissingImageBlocks(base, override) : override;
+    }
     if (typeof override !== "object") return override;
     if (typeof base !== "object" || base === null || Array.isArray(base)) base = {};
     var out = {};

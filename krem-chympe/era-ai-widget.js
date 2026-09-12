@@ -20,7 +20,7 @@
  * plain DOM, matches the site's dark glassmorphism look.
  */
 (function () {
-  const API_BASE = "https://chympe-booking-backend.book-and-explore.workers.dev";
+  const API_BASE = "https://teamexploera-backend.book-and-explore.workers.dev";
   const SITE_ID = window.KC_SITE_ID || "root";
   
   // ===== FIX #1: Persistent Session ID =====

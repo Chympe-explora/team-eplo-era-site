@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Krem Chympe — Super Admin Dashboard</title>
+<!--
+  Fully client-side — no backend, no Render, no Cloudflare Worker, no
+  Telegram bot. Everything the admin edits here is saved straight into
+  this browser's localStorage, and index.html reads it from the same
+  place (live, via a "storage" event listener) when opened in the same
+  browser. See ../README.md for the "why" and the per-device limitation.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+<style>
+  :root{ color-scheme: dark; --brand:#2E8B57; --brand-dark:#257a4b; }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; font-family:'Inter','Poppins',system-ui,-apple-system,sans-serif;
+    color:#f2f4f8; padding:16px 16px 60px;
+    background: radial-gradient(1200px 600px at 20% -10%, rgba(46,139,87,0.22), transparent 60%),
+                radial-gradient(900px 600px at 110% 10%, rgba(184,134,59,0.10), transparent 55%),
+                linear-gradient(160deg,#0b140f,#0f1c15 55%,#0b140f);
+    background-attachment: fixed;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+  .card{
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-radius:20px; padding:20px; margin-bottom:14px;
+  }
+  h1{font-size:21px; margin:0 0 4px; font-weight:800;}
+  h2{font-size:15px; margin:0 0 10px; font-weight:700;}
+  .sub{opacity:0.65; font-size:13px; margin:0 0 18px; line-height:1.5;}
+  label{display:block; font-size:12px; opacity:0.75; margin-bottom:6px; margin-top:14px;}
+  input,select{
+    width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.15);
+    background:rgba(0,0,0,0.25); color:#fff; font-size:15px; font-family:inherit;
+  }
+  input:focus,select:focus{outline:none; border-color:var(--brand);}
+  button{
+    padding:11px 16px; border:none; border-radius:999px;
+    background:var(--brand); color:#fff; font-weight:700; font-size:14px; cursor:pointer;
+    font-family:inherit;
+  }
+  button:hover{background:var(--brand-dark);}
+  button:disabled{opacity:0.5; cursor:default;}
+  button.ghost{background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:#fff;}
+  button.danger{background:#c0392b;}
+  button.small{padding:7px 12px; font-size:12px;}
+  button.full{width:100%; margin-top:14px;}
+  .err{color:#ff9b9b; font-size:13px; margin-top:10px; min-height:16px;}
+  .ok{color:#7dffc0; font-size:13px; margin-top:10px; min-height:16px;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; flex-wrap:wrap;}
+  .tabs{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+  .tab{padding:8px 14px; border-radius:999px; background:rgba(255,255,255,0.07); font-size:13px; cursor:pointer; border:1px solid transparent;}
+  .tab.active{background:var(--brand); font-weight:700;}
+  .priceField{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.06);}
+  .priceField label{margin:0; flex:1;}
+  .priceField input{width:130px; text-align:right;}
+  .hidden{display:none !important;}
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .stat{background:rgba(255,255,255,0.05); border-radius:14px; padding:18px; text-align:center;}
+  .stat .num{font-size:26px; font-weight:800; color:#7dffc0;}
+  .stat .lbl{font-size:11px; opacity:0.6; margin-top:4px;}
+  .item-row{display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06);}
+  .item-row input{flex:1;}
+  .item-row input.price{max-width:100px; text-align:right; flex:none;}
+  .item-row button{flex:none;}
+  .power-badge{font-size:11px; padding:4px 10px; border-radius:999px; background:rgba(46,139,87,0.25); border:1px solid rgba(46,139,87,0.5); color:#a8ffcf; font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="loginView">
+    <div class="card" style="text-align:center;">
+      <div style="font-size:40px;">🌿</div>
+      <h1 style="margin-top:8px;">Krem Chympe</h1>
+      <p class="sub">Super Admin Dashboard — full control over prices, items, and site content.</p>
+      <label style="text-align:left;">Password</label>
+      <input type="password" id="loginPassword" placeholder="Admin password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <button class="full" onclick="doLogin()">Log In</button>
+      <div class="err" id="loginErr"></div>
+      <p class="sub" style="margin:14px 0 0;font-size:11px;">Default password: <b>ChangeMe@2024</b> — change it under Settings after logging in. This is a client-side gate only (no server), so treat it as keeping casual visitors out, not real security.</p>
+    </div>
+  </div>
+
+  <div id="appView" class="hidden">
+    <div class="topbar">
+      <div>
+        <h1>🌿 Super Admin</h1>
+        <span class="power-badge">Full control — no backend</span>
+      </div>
+      <button class="ghost small" onclick="logout()">Log Out</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="prices" onclick="switchTab('prices')">💰 Prices</div>
+      <div class="tab" data-tab="items" onclick="switchTab('items')">🍢 Items</div>
+      <div class="tab" data-tab="content" onclick="switchTab('content')">✏️ Content</div>
+      <div class="tab" data-tab="visitors" onclick="switchTab('visitors')">📊 Visitors</div>
+      <div class="tab" data-tab="bookings" onclick="switchTab('bookings')">📖 Bookings</div>
+      <div class="tab" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</div>
+    </div>
+
+    <!-- PRICES -->
+    <div id="tab-prices">
+      <div class="card">
+        <h2>Shared Tour</h2>
+        <div class="priceField"><label>Per person (₹)</label><input type="number" id="p_sharedTour_perPerson"></div>
+        <div class="priceField"><label>Lunch thali price (₹)</label><input type="number" id="p_sharedTour_lunchThaliPrice"></div>
+      </div>
+      <div class="card">
+        <h2>Private Package</h2>
+        <div class="priceField"><label>4x4 Jeep (₹)</label><input type="number" id="p_privatePackage_jeep"></div>
+        <div class="priceField"><label>Local guide (₹)</label><input type="number" id="p_privatePackage_guide"></div>
+        <div class="priceField"><label>Adventure (per person, ₹)</label><input type="number" id="p_privatePackage_adventurePerPerson"></div>
+        <div class="priceField"><label>Lunch thali price (₹)</label><input type="number" id="p_privatePackage_lunchThaliPrice"></div>
+        <div class="priceField"><label>Camping tent (₹)</label><input type="number" id="p_privatePackage_campingTent"></div>
+        <div class="priceField"><label>Camping meals (per person, ₹)</label><input type="number" id="p_privatePackage_campingMealsPerPerson"></div>
+        <div class="priceField"><label>Overnight guide (₹)</label><input type="number" id="p_privatePackage_overnightGuide"></div>
+      </div>
+      <div class="card">
+        <h2>Other</h2>
+        <div class="priceField"><label>Child free age (below this = free)</label><input type="number" id="p_childFreeAge"></div>
+        <div class="priceField"><label>Minimum advance payment (₹)</label><input type="number" id="p_minAdvance"></div>
+      </div>
+      <button class="full" onclick="savePrices()">Save Prices — Live Instantly</button>
+      <div class="ok" id="pricesOk"></div>
+      <div class="err" id="pricesErr"></div>
+    </div>
+
+    <!-- ITEMS -->
+    <div id="tab-items" class="hidden">
+      <div class="card">
+        <h2>Bamboo Menu (Camping add-ons)</h2>
+        <p class="sub" style="margin:0 0 6px;">Add, rename, reprice, or remove any item. Changes apply to every package that uses this menu.</p>
+        <div id="bambooList"></div>
+        <button class="ghost full" onclick="addBambooItem()">+ Add Item</button>
+      </div>
+      <div class="card">
+        <h2>Thali Types</h2>
+        <p class="sub" style="margin:0 0 6px;">Used for lunch selection on Shared Tour and Private Package.</p>
+        <div id="thaliList"></div>
+        <button class="ghost full" onclick="addThaliItem()">+ Add Thali Type</button>
+      </div>
+      <button class="full" onclick="saveItems()">Save Items — Live Instantly</button>
+      <div class="ok" id="itemsOk"></div>
+      <div class="err" id="itemsErr"></div>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="tab-content" class="hidden">
+      <div class="card">
+        <h2>Site Identity</h2>
+        <label>Site Name</label><input type="text" id="c_siteName">
+        <label>Site Subtitle</label><input type="text" id="c_siteSub">
+        <label>Instagram Link</label><input type="text" id="c_instagram">
+      </div>
+      <div class="card">
+        <h2>Booking &amp; Payment Contact</h2>
+        <label>WhatsApp Number (digits only, with country code)</label><input type="text" id="c_whatsapp">
+        <label>UPI ID</label><input type="text" id="c_upiId">
+        <label>Bank Account Name</label><input type="text" id="c_bankName">
+        <label>Bank Account Number</label><input type="text" id="c_bankAccount">
+        <label>IFSC Code</label><input type="text" id="c_bankIfsc">
+        <label>Bank Name / Branch</label><input type="text" id="c_bankBankName">
+      </div>
+      <button class="full" onclick="saveContent()">Save Content — Live Instantly</button>
+      <div class="ok" id="contentOk"></div>
+      <div class="err" id="contentErr"></div>
+    </div>
+
+    <!-- VISITORS -->
+    <div id="tab-visitors" class="hidden">
+      <div class="card">
+        <h2>Visitor Counter</h2>
+        <p class="sub" style="margin:0 0 12px;">Every visit to the site (in this browser) bumps this counter by one. The same number is used as the reference code (e.g. #0007) in every WhatsApp booking message sent from this device.</p>
+        <div class="stat-grid">
+          <div class="stat"><div class="num" id="visitorCount">0</div><div class="lbl">Total Visits (this device)</div></div>
+        </div>
+        <button class="ghost full" onclick="resetVisitorCount()">Reset Counter to 0000</button>
+      </div>
+    </div>
+
+    <!-- BOOKINGS -->
+    <div id="tab-bookings" class="hidden">
+      <div class="card">
+        <h2>Bookings</h2>
+        <p class="sub" style="margin:0 0 12px;">Every booking submitted from this device. WhatsApp doesn't report back automatically — update the status here after you confirm with the guest on WhatsApp.</p>
+        <div class="stat-grid" style="margin-bottom:14px;">
+          <div class="stat"><div class="num" id="bookingsTotal">0</div><div class="lbl">Total Bookings</div></div>
+          <div class="stat"><div class="num" id="bookingsPending">0</div><div class="lbl">Pending</div></div>
+        </div>
+        <div id="bookingsList"></div>
+        <button class="ghost full" onclick="exportBookingsCsv()">⬇ Export CSV</button>
+        <button class="full" onclick="saveBookings()">Save Changes</button>
+        <div class="ok" id="bookingsOk"></div>
+        <div class="err" id="bookingsErr"></div>
+      </div>
+      <div class="card">
+        <h2 style="color:#ff9b9b;">Clear All Bookings</h2>
+        <p class="sub" style="margin:0 0 12px;">Deletes every booking record on this device. This cannot be undone.</p>
+        <button class="danger full" onclick="clearAllBookings()">Delete All Bookings</button>
+        <div class="ok" id="bookingsClearOk"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="tab-settings" class="hidden">
+      <div class="card">
+        <h2>Change Admin Password</h2>
+        <label>New password (min 6 characters)</label>
+        <input type="password" id="newPassword"/>
+        <button class="full" onclick="changePassword()">Update Password</button>
+        <div class="ok" id="settingsOk"></div>
+        <div class="err" id="settingsErr"></div>
+      </div>
+      <div class="card">
+        <h2 style="color:#ff9b9b;">Danger Zone</h2>
+        <p class="sub" style="margin:0 0 12px;">Resets prices, items, and content back to the defaults built into the site, and clears the visitor counter. This cannot be undone.</p>
+        <button class="danger full" onclick="resetEverything()">Reset Everything to Defaults</button>
+        <div class="ok" id="dangerOk"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // --------------------------------------------------------------------
+  // Storage keys — must match the ones app.js reads on the main site.
+  // --------------------------------------------------------------------
+  var PRICES_KEY = 'kc_admin_prices';
+  var CONTENT_KEY = 'kc_admin_content';
+  var VISITOR_KEY = 'kc_visitor_seq';
+  var BOOKINGS_KEY = 'kc_bookings';
+  var BOOKING_STATUSES = ['pending', 'confirmed', 'paid', 'cancelled'];
+  var PASS_HASH_KEY = 'kc_admin_pass_hash';
+  var SESSION_KEY = 'kc_admin_session';
+  var DEFAULT_PASSWORD = 'ChangeMe@2024';
+
+  // Same defaults as index.html's window.KC_PRICES, duplicated here since
+  // this page is opened standalone (no shared build step / bundler).
+  var DEFAULT_THALI_TYPES = [
+    { id: 'veg', name: 'Veg Thali' },
+    { id: 'chicken', name: 'Chicken Thali' },
+    { id: 'pork', name: 'Pork Thali' }
+  ];
+  var DEFAULT_PRICES = {
+    sharedTour: { perPerson: 2600, lunchThaliPrice: 380, thaliTypes: JSON.parse(JSON.stringify(DEFAULT_THALI_TYPES)) },
+    privatePackage: { jeep: 4000, guide: 1500, adventurePerPerson: 1500, lunchThaliPrice: 380, campingTent: 1000, campingMealsPerPerson: 380, overnightGuide: 2000, thaliTypes: JSON.parse(JSON.stringify(DEFAULT_THALI_TYPES)) },
+    childFreeAge: 10,
+    minAdvance: 500
+  };
+  var DEFAULT_BAMBOO_MENU = [
+    { id: 'chicken500', name: 'Fresh Bamboo Chicken (500g)', price: 699 },
+    { id: 'chicken1kg', name: 'Fresh Bamboo Chicken (1kg)', price: 890 },
+    { id: 'pork500', name: 'Fresh Bamboo Pork (500g)', price: 799 },
+    { id: 'pork1kg', name: 'Fresh Bamboo Pork (1kg)', price: 1000 },
+    { id: 'porkbelly500', name: 'Roasted Pork Belly Salad (500g)', price: 599 },
+    { id: 'porkbelly1kg', name: 'Roasted Pork Belly Salad (1kg)', price: 900 },
+    { id: 'fish', name: 'Boiled Fish (Zero Oil)', price: 250 },
+    { id: 'vegsabji', name: 'Veg Bamboo Sabji', price: 300 },
+    { id: 'egg', name: 'Boiled Egg', price: 20 },
+    { id: 'chai', name: 'Bamboo Chai', price: 20 }
+  ];
+  var DEFAULT_CONTENT = {
+    siteName: 'KREM CHYMPE', siteSub: 'ADVENTURE & CAMPING',
+    instagram: '', whatsappNumber: '916001877518', upiId: 'kremchympe@upi',
+    bank: { name: 'Krem Chympe Adventure', account: '123456789012', ifsc: '', bankName: 'SBI, Cherrapunji Branch' }
+  };
+
+  // --------------------------------------------------------------------
+  // Tiny non-cryptographic hash — this is a client-only gate with no
+  // server to verify against, so a lightweight hash (rather than
+  // crypto.subtle, which requires a secure context) keeps this working
+  // even opened over plain http:// or file://. Not real security either
+  // way — see the note on the login screen.
+  // --------------------------------------------------------------------
+  function simpleHash(str) {
+    var h = 5381;
+    for (var i = 0; i < str.length; i++) { h = ((h * 33) ^ str.charCodeAt(i)) >>> 0; }
+    return h.toString(16);
+  }
+
+  function getJSON(key, fallback) {
+    try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch (e) { return fallback; }
+  }
+  function setJSON(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+
+  // --------------------------------------------------------------------
+  // AUTH
+  // --------------------------------------------------------------------
+  function doLogin() {
+    var password = document.getElementById('loginPassword').value;
+    var storedHash = localStorage.getItem(PASS_HASH_KEY) || simpleHash(DEFAULT_PASSWORD);
+    document.getElementById('loginErr').textContent = '';
+    if (simpleHash(password) === storedHash) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      showApp();
+    } else {
+      document.getElementById('loginErr').textContent = 'Incorrect password.';
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem(SESSION_KEY);
+    document.getElementById('appView').classList.add('hidden');
+    document.getElementById('loginView').classList.remove('hidden');
+  }
+
+  function showApp() {
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('appView').classList.remove('hidden');
+    loadPrices();
+    loadItems();
+    loadContent();
+    loadVisitors();
+    loadBookings();
+  }
+
+  function switchTab(name) {
+    ['prices', 'items', 'content', 'visitors', 'bookings', 'settings'].forEach(function (t) {
+      document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
+    });
+    document.querySelectorAll('.tabs .tab').forEach(function (el) {
+      el.classList.toggle('active', el.getAttribute('data-tab') === name);
+    });
+  }
+
+  // --------------------------------------------------------------------
+  // PRICES
+  // --------------------------------------------------------------------
+  var PRICE_PATHS = [
+    ['sharedTour', 'perPerson'], ['sharedTour', 'lunchThaliPrice'],
+    ['privatePackage', 'jeep'], ['privatePackage', 'guide'], ['privatePackage', 'adventurePerPerson'], ['privatePackage', 'lunchThaliPrice'],
+    ['privatePackage', 'campingTent'], ['privatePackage', 'campingMealsPerPerson'], ['privatePackage', 'overnightGuide']
+  ];
+
+  function currentPrices() {
+    var stored = getJSON(PRICES_KEY, null);
+    var base = JSON.parse(JSON.stringify(DEFAULT_PRICES));
+    base.bambooMenu = JSON.parse(JSON.stringify(DEFAULT_BAMBOO_MENU));
+    if (stored) {
+      ['sharedTour', 'privatePackage'].forEach(function (k) { if (stored[k]) Object.assign(base[k], stored[k]); });
+      if (stored.childFreeAge !== undefined) base.childFreeAge = stored.childFreeAge;
+      if (stored.minAdvance !== undefined) base.minAdvance = stored.minAdvance;
+      if (stored.bambooMenu) base.bambooMenu = stored.bambooMenu;
+    }
+    return base;
+  }
+
+  function loadPrices() {
+    var prices = currentPrices();
+    PRICE_PATHS.forEach(function (p) {
+      var el = document.getElementById('p_' + p[0] + '_' + p[1]);
+      if (el) el.value = prices[p[0]][p[1]];
+    });
+    document.getElementById('p_childFreeAge').value = prices.childFreeAge;
+    document.getElementById('p_minAdvance').value = prices.minAdvance;
+  }
+
+  function savePrices() {
+    document.getElementById('pricesOk').textContent = '';
+    document.getElementById('pricesErr').textContent = '';
+    try {
+      var prices = currentPrices();
+      PRICE_PATHS.forEach(function (p) {
+        var el = document.getElementById('p_' + p[0] + '_' + p[1]);
+        if (el) prices[p[0]][p[1]] = Number(el.value);
+      });
+      prices.childFreeAge = Number(document.getElementById('p_childFreeAge').value);
+      prices.minAdvance = Number(document.getElementById('p_minAdvance').value);
+      setJSON(PRICES_KEY, prices);
+      document.getElementById('pricesOk').textContent = 'Saved — live on the site immediately (same browser).';
+    } catch (e) { document.getElementById('pricesErr').textContent = e.message; }
+  }
+
+  // --------------------------------------------------------------------
+  // ITEMS (bamboo menu + thali types)
+  // --------------------------------------------------------------------
+  var bambooMenu = [];
+  var thaliTypes = [];
+
+  function slugify(name) {
+    return (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '') || ('item' + Date.now());
+  }
+
+  function loadItems() {
+    var prices = currentPrices();
+    bambooMenu = prices.bambooMenu || JSON.parse(JSON.stringify(DEFAULT_BAMBOO_MENU));
+    thaliTypes = (prices.sharedTour && prices.sharedTour.thaliTypes) || JSON.parse(JSON.stringify(DEFAULT_THALI_TYPES));
+    renderBamboo();
+    renderThali();
+  }
+
+  function renderBamboo() {
+    var el = document.getElementById('bambooList');
+    el.innerHTML = bambooMenu.map(function (item, i) {
+      return '<div class="item-row">' +
+        '<input type="text" value="' + escapeAttr(item.name) + '" oninput="bambooMenu[' + i + '].name=this.value">' +
+        '<input type="number" class="price" value="' + item.price + '" oninput="bambooMenu[' + i + '].price=Number(this.value)">' +
+        '<button class="danger small" onclick="removeBambooItem(' + i + ')">✕</button>' +
+        '</div>';
+    }).join('') || '<p class="sub" style="margin:0;">No items yet.</p>';
+  }
+
+  function renderThali() {
+    var el = document.getElementById('thaliList');
+    el.innerHTML = thaliTypes.map(function (item, i) {
+      return '<div class="item-row">' +
+        '<input type="text" value="' + escapeAttr(item.name) + '" oninput="thaliTypes[' + i + '].name=this.value">' +
+        '<button class="danger small" onclick="removeThaliItem(' + i + ')">✕</button>' +
+        '</div>';
+    }).join('') || '<p class="sub" style="margin:0;">No thali types yet.</p>';
+  }
+
+  function addBambooItem() { bambooMenu.push({ id: 'item' + Date.now(), name: 'New Item', price: 0 }); renderBamboo(); }
+  function removeBambooItem(i) { bambooMenu.splice(i, 1); renderBamboo(); }
+  function addThaliItem() { thaliTypes.push({ id: 'thali' + Date.now(), name: 'New Thali' }); renderThali(); }
+  function removeThaliItem(i) { thaliTypes.splice(i, 1); renderThali(); }
+
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+  function saveItems() {
+    document.getElementById('itemsOk').textContent = '';
+    document.getElementById('itemsErr').textContent = '';
+    try {
+      bambooMenu.forEach(function (item) { item.id = item.id || slugify(item.name); });
+      thaliTypes.forEach(function (item) { item.id = item.id || slugify(item.name); });
+      var prices = currentPrices();
+      prices.bambooMenu = bambooMenu;
+      // Same thali list is shared by both packages that offer lunch thalis.
+      prices.sharedTour.thaliTypes = thaliTypes;
+      prices.privatePackage.thaliTypes = thaliTypes;
+      setJSON(PRICES_KEY, prices);
+      document.getElementById('itemsOk').textContent = 'Saved — live on the site immediately (same browser).';
+    } catch (e) { document.getElementById('itemsErr').textContent = e.message; }
+  }
+
+  // --------------------------------------------------------------------
+  // CONTENT
+  // --------------------------------------------------------------------
+  function currentContent() {
+    var stored = getJSON(CONTENT_KEY, null);
+    var base = JSON.parse(JSON.stringify(DEFAULT_CONTENT));
+    if (stored) {
+      Object.assign(base, stored);
+      if (stored.bank) Object.assign(base.bank, stored.bank);
+    }
+    return base;
+  }
+
+  function loadContent() {
+    var c = currentContent();
+    document.getElementById('c_siteName').value = c.siteName;
+    document.getElementById('c_siteSub').value = c.siteSub;
+    document.getElementById('c_instagram').value = c.instagram;
+    document.getElementById('c_whatsapp').value = c.whatsappNumber;
+    document.getElementById('c_upiId').value = c.upiId;
+    document.getElementById('c_bankName').value = c.bank.name;
+    document.getElementById('c_bankAccount').value = c.bank.account;
+    document.getElementById('c_bankIfsc').value = c.bank.ifsc;
+    document.getElementById('c_bankBankName').value = c.bank.bankName;
+  }
+
+  function saveContent() {
+    document.getElementById('contentOk').textContent = '';
+    document.getElementById('contentErr').textContent = '';
+    try {
+      var c = {
+        siteName: document.getElementById('c_siteName').value,
+        siteSub: document.getElementById('c_siteSub').value,
+        instagram: document.getElementById('c_instagram').value,
+        whatsappNumber: document.getElementById('c_whatsapp').value.replace(/[^0-9]/g, ''),
+        upiId: document.getElementById('c_upiId').value,
+        bank: {
+          name: document.getElementById('c_bankName').value,
+          account: document.getElementById('c_bankAccount').value,
+          ifsc: document.getElementById('c_bankIfsc').value,
+          bankName: document.getElementById('c_bankBankName').value
+        }
+      };
+      setJSON(CONTENT_KEY, c);
+      document.getElementById('contentOk').textContent = 'Saved — live on the site immediately (same browser).';
+    } catch (e) { document.getElementById('contentErr').textContent = e.message; }
+  }
+
+  // --------------------------------------------------------------------
+  // VISITORS
+  // --------------------------------------------------------------------
+  function loadVisitors() {
+    var n = parseInt(localStorage.getItem(VISITOR_KEY), 10) || 0;
+    document.getElementById('visitorCount').textContent = String(n).padStart(4, '0');
+  }
+  function resetVisitorCount() {
+    if (!confirm('Reset the visitor counter to 0000?')) return;
+    localStorage.setItem(VISITOR_KEY, '0');
+    loadVisitors();
+  }
+
+  // --------------------------------------------------------------------
+  // BOOKINGS — records are written by app.js (submitBookingViaWhatsApp,
+  // key kc_bookings) whenever a visitor submits a booking on this device.
+  // Full CRUD here: edit any field or the status, delete one, clear all,
+  // or export everything currently loaded as a CSV file.
+  // --------------------------------------------------------------------
+  var bookings = [];
+
+  function loadBookings() {
+    bookings = getJSON(BOOKINGS_KEY, []);
+    renderBookings();
+  }
+
+  function renderBookings() {
+    var el = document.getElementById('bookingsList');
+    document.getElementById('bookingsTotal').textContent = bookings.length;
+    document.getElementById('bookingsPending').textContent = bookings.filter(function (b) { return b.status === 'pending'; }).length;
+    if (!bookings.length) {
+      el.innerHTML = '<p class="sub" style="margin:0;">No bookings yet.</p>';
+      return;
+    }
+    // Newest first.
+    var order = bookings.map(function (b, i) { return i; })
+      .sort(function (a, b) { return (bookings[b].createdAt || '').localeCompare(bookings[a].createdAt || ''); });
+    el.innerHTML = order.map(function (i) {
+      var b = bookings[i];
+      return '<div class="card" style="padding:14px;margin-bottom:10px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+          '<b style="font-family:ui-monospace,Menlo,Consolas,monospace;">#' + escapeAttr(b.code || '----') + '</b>' +
+          '<select onchange="bookings[' + i + '].status=this.value" style="width:auto;padding:6px 10px;font-size:12px;">' +
+            BOOKING_STATUSES.map(function (s) { return '<option value="' + s + '"' + (b.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+          '</select>' +
+        '</div>' +
+        '<label style="margin-top:10px;">Name</label><input type="text" value="' + escapeAttr(b.name) + '" oninput="bookings[' + i + '].name=this.value">' +
+        '<label>WhatsApp</label><input type="text" value="' + escapeAttr(b.whatsapp) + '" oninput="bookings[' + i + '].whatsapp=this.value">' +
+        '<label>Date</label><input type="text" value="' + escapeAttr(b.date) + '" oninput="bookings[' + i + '].date=this.value">' +
+        '<div style="font-size:12px;opacity:0.65;margin-top:10px;line-height:1.6;">' +
+          escapeAttr(b.package || '-') + (b.people ? ' · ' + b.people + ' people' : '') + '<br>' +
+          'Total ₹' + Number(b.total || 0).toLocaleString('en-IN') +
+          ' · Advance ₹' + Number(b.advance || 0).toLocaleString('en-IN') +
+          ' · Balance ₹' + Number(b.balance || 0).toLocaleString('en-IN') +
+        '</div>' +
+        '<button class="danger small" style="margin-top:10px;" onclick="deleteBooking(' + i + ')">Delete</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function deleteBooking(i) {
+    if (!confirm('Delete this booking record? This cannot be undone.')) return;
+    bookings.splice(i, 1);
+    setJSON(BOOKINGS_KEY, bookings);
+    renderBookings();
+  }
+
+  function saveBookings() {
+    document.getElementById('bookingsOk').textContent = '';
+    document.getElementById('bookingsErr').textContent = '';
+    try {
+      setJSON(BOOKINGS_KEY, bookings);
+      document.getElementById('bookingsOk').textContent = 'Saved.';
+    } catch (e) { document.getElementById('bookingsErr').textContent = e.message; }
+  }
+
+  function clearAllBookings() {
+    if (!confirm('Delete ALL booking records on this device? This cannot be undone.')) return;
+    bookings = [];
+    localStorage.removeItem(BOOKINGS_KEY);
+    renderBookings();
+    document.getElementById('bookingsClearOk').textContent = 'All bookings deleted.';
+  }
+
+  function exportBookingsCsv() {
+    if (!bookings.length) { alert('No bookings to export.'); return; }
+    var cols = ['code', 'createdAt', 'status', 'name', 'whatsapp', 'date', 'package', 'people', 'total', 'advance', 'balance'];
+    var rows = [cols.join(',')].concat(bookings.map(function (b) {
+      return cols.map(function (c) {
+        var v = b[c] == null ? '' : String(b[c]);
+        if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1) v = '"' + v.replace(/"/g, '""') + '"';
+        return v;
+      }).join(',');
+    }));
+    var blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'krem-chympe-bookings.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  }
+
+  // --------------------------------------------------------------------
+  // SETTINGS
+  // --------------------------------------------------------------------
+  function changePassword() {
+    document.getElementById('settingsOk').textContent = '';
+    document.getElementById('settingsErr').textContent = '';
+    var newPassword = document.getElementById('newPassword').value;
+    if (!newPassword || newPassword.length < 6) {
+      document.getElementById('settingsErr').textContent = 'Password must be at least 6 characters.';
+      return;
+    }
+    localStorage.setItem(PASS_HASH_KEY, simpleHash(newPassword));
+    document.getElementById('settingsOk').textContent = 'Password updated.';
+    document.getElementById('newPassword').value = '';
+  }
+
+  function resetEverything() {
+    if (!confirm('Reset ALL prices, items, content, the visitor counter, and bookings back to defaults? This cannot be undone.')) return;
+    if (!confirm('Are you absolutely sure? This applies immediately on this device.')) return;
+    localStorage.removeItem(PRICES_KEY);
+    localStorage.removeItem(CONTENT_KEY);
+    localStorage.removeItem(VISITOR_KEY);
+    localStorage.removeItem(BOOKINGS_KEY);
+    document.getElementById('dangerOk').textContent = 'Everything reset to defaults.';
+    loadPrices(); loadItems(); loadContent(); loadVisitors(); loadBookings();
+  }
+
+  // Boot — stay logged in for this browser tab/session only (closing the
+  // tab logs out), same spirit as the old JWT token but with no server to
+  // issue or verify one.
+  if (sessionStorage.getItem(SESSION_KEY)) { showApp(); }
+</script>
+</body>
+</html>

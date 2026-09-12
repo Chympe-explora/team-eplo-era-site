@@ -715,6 +715,9 @@
 
   function App() {
     var menuState = useState(false); var mobileMenuOpen = menuState[0], setMobileMenuOpen = menuState[1];
+
+    // "Why Book Us" starts collapsed; visitors tap the header to expand it.
+    var bookingOpenState = useState(false); var bookingOpen = bookingOpenState[0], setBookingOpen = bookingOpenState[1];
     var pageState = useState("home"); var page = pageState[0], setPage = pageState[1];
 
     // Which destination card's "Explore Destination" nav popover is
@@ -1073,29 +1076,54 @@
       h(SectionBG, { section: "booking" }),
       h(
         GlassCard, { className: "p-8 md:p-12" },
-        h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight text-center" }, BOOKING.title),
-        BOOKING.subtitle && h("p", { className: "mt-2 text-white/80 text-base font-medium text-center" }, BOOKING.subtitle),
-        BOOKING.intro && h("p", { className: "mt-4 text-white/60 text-sm leading-relaxed text-center max-w-[640px] mx-auto" }, BOOKING.intro),
         h(
-          "div", { className: "mt-10 space-y-6 max-w-[720px] mx-auto" },
-          (BOOKING.reasons || []).map(function (r, i) {
-            return h(
-              "div", { key: i, className: "pt-6 border-t border-white/10 first:pt-0 first:border-t-0" },
-              h(
-                "div", { className: "flex items-center gap-3" },
-                r.emoji && h("span", { className: "text-2xl" }, r.emoji),
-                h("h3", { className: "font-semibold text-[15px]" }, r.title)
-              ),
-              r.description && h("p", { className: "mt-3 text-[13px] text-white/70 leading-relaxed" }, r.description),
-              h(ImageSlot, { slotKey: "booking_" + (i + 1), className: "mt-4 rounded-xl overflow-hidden aspect-[16/9] bg-black/20" })
-            );
-          })
+          "button",
+          {
+            type: "button",
+            onClick: function () { setBookingOpen(function (v) { return !v; }); },
+            className: "w-full flex items-center justify-between gap-4 text-left",
+            "aria-expanded": bookingOpen ? "true" : "false"
+          },
+          h(
+            "div", { className: "flex-1" },
+            h("h2", { className: "text-2xl md:text-3xl font-bold tracking-tight text-center" }, BOOKING.title),
+            BOOKING.subtitle && h("p", { className: "mt-2 text-white/80 text-base font-medium text-center" }, BOOKING.subtitle)
+          ),
+          h(
+            "div", { className: "w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0" },
+            h(ChevronDown, { size: 20, className: "transition-transform duration-300 " + (bookingOpen ? "rotate-180" : "") })
+          )
         ),
-        BOOKING.closing && BOOKING.closing.length > 0 && h(
-          "div", { className: "mt-10 pt-8 border-t border-white/10 max-w-[640px] mx-auto text-center" },
-          BOOKING.closing.map(function (line, i) {
-            return h("p", { key: i, className: "text-white/70 text-sm leading-relaxed mt-2" }, line);
-          })
+        h(
+          "div",
+          {
+            className: "grid transition-[grid-template-rows] duration-300 ease-out " + (bookingOpen ? "grid-rows-[1fr] mt-8" : "grid-rows-[0fr] mt-0")
+          },
+          h(
+            "div", { className: "overflow-hidden" },
+            BOOKING.intro && h("p", { className: "mt-4 text-white/60 text-sm leading-relaxed text-center max-w-[640px] mx-auto" }, BOOKING.intro),
+            h(
+              "div", { className: "mt-10 space-y-6 max-w-[720px] mx-auto" },
+              (BOOKING.reasons || []).map(function (r, i) {
+                return h(
+                  "div", { key: i, className: "pt-6 border-t border-white/10 first:pt-0 first:border-t-0" },
+                  h(
+                    "div", { className: "flex items-center gap-3" },
+                    r.emoji && h("span", { className: "text-2xl" }, r.emoji),
+                    h("h3", { className: "font-semibold text-[15px]" }, r.title)
+                  ),
+                  r.description && h("p", { className: "mt-3 text-[13px] text-white/70 leading-relaxed" }, r.description),
+                  h(ImageSlot, { slotKey: "booking_" + (i + 1), className: "mt-4 rounded-xl overflow-hidden aspect-[16/9] bg-black/20" })
+                );
+              })
+            ),
+            BOOKING.closing && BOOKING.closing.length > 0 && h(
+              "div", { className: "mt-10 pt-8 border-t border-white/10 max-w-[640px] mx-auto text-center" },
+              BOOKING.closing.map(function (line, i) {
+                return h("p", { key: i, className: "text-white/70 text-sm leading-relaxed mt-2" }, line);
+              })
+            )
+          )
         )
       )
     );
